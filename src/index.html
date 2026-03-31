@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PerformanceLens — Setup</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #0C0F1A;
+            overflow: hidden;
+            height: 100vh;
+        }
+        .font-display { font-family: 'Space Grotesk', sans-serif; }
+
+        /* === ANIMATED BACKGROUND ORBS === */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.35;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .orb-1 {
+            width: 500px; height: 500px;
+            background: #06B6D4;
+            top: -15%; left: -10%;
+            animation: orbFloat1 14s ease-in-out infinite;
+        }
+        .orb-2 {
+            width: 400px; height: 400px;
+            background: #8B5CF6;
+            bottom: -10%; right: -5%;
+            animation: orbFloat2 18s ease-in-out infinite;
+        }
+        .orb-3 {
+            width: 300px; height: 300px;
+            background: #F97316;
+            top: 50%; left: 60%;
+            opacity: 0.15;
+            animation: orbFloat3 12s ease-in-out infinite;
+        }
+        @keyframes orbFloat1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(60px, 40px) scale(1.1); }
+            66% { transform: translate(-30px, 80px) scale(0.95); }
+        }
+        @keyframes orbFloat2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-50px, -60px) scale(1.08); }
+        }
+        @keyframes orbFloat3 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(40px, -40px); }
+        }
+
+        /* === STEP TRANSITIONS === */
+        .step {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: translateX(40px);
+            pointer-events: none;
+            transition: opacity 0.45s ease, transform 0.45s ease;
+        }
+        .step.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+        }
+        .step.exit-left {
+            opacity: 0;
+            transform: translateX(-40px);
+            pointer-events: none;
+        }
+
+        /* === INPUT STYLING === */
+        .input-field {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #F1F5F9;
+            font-size: 14px;
+            width: 100%;
+            transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+            outline: none;
+        }
+        .input-field::placeholder {
+            color: rgba(255,255,255,0.2);
+        }
+        .input-field:focus {
+            border-color: #22D3EE;
+            box-shadow: 0 0 0 3px rgba(34,211,238,0.1);
+            background: rgba(255,255,255,0.06);
+        }
+
+        /* === SELECTABLE CHIPS === */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: #94A3B8;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .chip:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.15);
+            color: #CBD5E1;
+        }
+        .chip.selected {
+            background: rgba(34,211,238,0.12);
+            border-color: rgba(34,211,238,0.4);
+            color: #22D3EE;
+        }
+
+        /* === LEVEL CARDS === */
+        .level-card {
+            flex: 1;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.02);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: center;
+        }
+        .level-card:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.12);
+        }
+        .level-card.selected {
+            background: rgba(34,211,238,0.08);
+            border-color: rgba(34,211,238,0.35);
+        }
+        .level-card.selected .level-icon {
+            color: #22D3EE;
+        }
+        .level-card.selected .level-label {
+            color: #F1F5F9;
+        }
+
+        /* === PROGRESS BAR === */
+        .progress-track {
+            height: 2px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #22D3EE, #8B5CF6);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* === SUCCESS CHECKMARK === */
+        .check-circle {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #22D3EE, #10B981);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* === BUTTON STYLES === */
+        .btn-primary {
+            background: linear-gradient(135deg, #FB923C, #F97316);
+            color: white;
+            font-weight: 600;
+            padding: 12px 32px;
+            border-radius: 10px;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(249,115,22,0.25);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 28px rgba(249,115,22,0.35);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #64748B;
+            font-weight: 500;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: color 0.2s, background 0.2s;
+        }
+        .btn-ghost:hover {
+            color: #94A3B8;
+            background: rgba(255,255,255,0.04);
+        }
+
+        /* === WELCOME ICON ANIMATION === */
+        .welcome-icon-ring {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: #22D3EE;
+            border-right-color: #8B5CF6;
+            animation: spinSlow 8s linear infinite;
+            position: absolute;
+        }
+        .welcome-icon-ring-2 {
+            width: 140px; height: 140px;
+            border-radius: 50%;
+            border: 1px solid transparent;
+            border-bottom-color: rgba(249,115,22,0.4);
+            border-left-color: rgba(34,211,238,0.2);
+            animation: spinSlow 12s linear infinite reverse;
+            position: absolute;
+        }
+        @keyframes spinSlow {
+            to { transform: rotate(360deg); }
+        }
+
+        /* === SUBTLE GRID PATTERN === */
+        .grid-pattern {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Hide scrollbar */
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+
+<body class="text-slate-200">
+
+    <!-- Background layers -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="grid-pattern"></div>
+
+    <!-- Main container -->
+    <div class="relative z-10 h-screen flex flex-col">
+
+        <!-- Top: Logo + Progress -->
+        <div class="flex-shrink-0 px-8 pt-6 pb-4">
+            <div class="max-w-md mx-auto">
+                <!-- Logo -->
+                <div class="flex items-center gap-2.5 mb-6">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #22D3EE, #8B5CF6);">
+                        <i class="fa-solid fa-chart-line text-white text-xs"></i>
+                    </div>
+                    <span class="font-display font-bold text-sm text-slate-300">PerformanceLens</span>
+                </div>
+
+                <!-- Progress -->
+                <div class="flex items-center gap-3">
+                    <div class="progress-track flex-1">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <span class="text-xs text-slate-500 font-display" id="stepLabel">1 / 4</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Steps container -->
+        <div class="flex-1 relative overflow-hidden">
+
+            <!-- ==================== STEP 1: WELCOME ==================== -->
+            <div class="step active" id="step1">
+                <div class="text-center max-w-sm mx-auto px-6">
+                    <!-- Animated icon -->
+                    <div class="relative flex items-center justify-center mb-10">
+                        <div class="welcome-icon-ring"></div>
+                        <div class="welcome-icon-ring-2"></div>
+                        <div class="w-20 h-20 rounded-2xl flex items-center justify-center relative z-10" style="background: linear-gradient(135deg, rgba(34,211,238,0.15), rgba(139,92,246,0.15)); border: 1px solid rgba(255,255,255,0.08);">
+                            <i class="fa-solid fa-graduation-cap text-3xl" style="background: linear-gradient(135deg, #22D3EE, #A78BFA); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
+                        </div>
+                    </div>
+
+                    <h1 class="font-display text-3xl font-bold text-white mb-3">Welcome to<br>PerformanceLens</h1>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-10">
+                        Turn your grades into clear insights. See where you stand, where you're slipping, and what to do about it.
+                    </p>
+
+                    <button class="btn-primary w-full" onclick="goToStep(2)">
+                        Let's Get Started
+                        <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
+                    </button>
+
+                    <p class="text-xs text-slate-600 mt-5">
+                        <i class="fa-solid fa-lock mr-1"></i>
+                        Everything stays on your machine
+                    </p>
+                </div>
+            </div>
+
+
+            <!-- ==================== STEP 2: PROFILE ==================== -->
+            <div class="step" id="step2">
+                <div class="w-full max-w-sm mx-auto px-6">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);">
+                            <i class="fa-solid fa-user text-cyan-400 text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-display text-lg font-bold text-white">Create Your Profile</h2>
+                            <p class="text-xs text-slate-500">We need basics to personalize your experience</p>
+                        </div>
+                    </div>
+
+                    <form id="profileForm" onsubmit="return handleProfile(event)">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">Full Name</label>
+                                <input type="text" class="input-field" placeholder="Alex Johnson" id="fullName" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">Email Address</label>
+                                <input type="email" class="input-field" placeholder="alex@school.edu" id="email" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">Password</label>
+                                <input type="password" class="input-field" placeholder="At least 6 characters" id="password" required minlength="6">
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 mt-8">
+                            <button type="button" class="btn-ghost" onclick="goToStep(1)">
+                                <i class="fa-solid fa-arrow-left mr-1 text-xs"></i> Back
+                            </button>
+                            <button type="submit" class="btn-primary flex-1">Continue</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+
+            <!-- ==================== STEP 3: ACADEMICS ==================== -->
+            <div class="step" id="step3">
+                <div class="w-full max-w-md mx-auto px-6">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2);">
+                            <i class="fa-solid fa-book text-violet-400 text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-display text-lg font-bold text-white">Academic Setup</h2>
+                            <p class="text-xs text-slate-500">Tell us about your studies</p>
+                        </div>
+                    </div>
+
+                    <!-- Education Level -->
+                    <div class="mb-7">
+                        <label class="block text-xs font-medium text-slate-400 mb-3">Education Level</label>
+                        <div class="flex gap-3" id="levelSelector">
+                            <div class="level-card" data-level="high-school" onclick="selectLevel(this)">
+                                <i class="fa-solid fa-school level-icon text-slate-500 text-lg mb-2 block transition-colors"></i>
+                                <span class="level-label text-xs text-slate-500 transition-colors">High School</span>
+                            </div>
+                            <div class="level-card" data-level="undergrad" onclick="selectLevel(this)">
+                                <i class="fa-solid fa-building-columns level-icon text-slate-500 text-lg mb-2 block transition-colors"></i>
+                                <span class="level-label text-xs text-slate-500 transition-colors">Undergraduate</span>
+                            </div>
+                            <div class="level-card" data-level="postgrad" onclick="selectLevel(this)">
+                                <i class="fa-solid fa-award level-icon text-slate-500 text-lg mb-2 block transition-colors"></i>
+                                <span class="level-label text-xs text-slate-500 transition-colors">Postgraduate</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subjects -->
+                    <div class="mb-6">
+                        <label class="block text-xs font-medium text-slate-400 mb-3">
+                            Your Subjects
+                            <span class="text-slate-600 ml-1">(select all that apply)</span>
+                        </label>
+                        <div class="flex flex-wrap gap-2" id="subjectChips">
+                            <div class="chip" onclick="toggleChip(this)" data-subject="Mathematics"><i class="fa-solid fa-square-root-variable text-[10px]"></i> Mathematics</div>
+                            <div class="chip" onclick="toggleChip(this)" data-subject="Physics"><i class="fa-solid fa-atom text-[10px]"></i> Physics</div>
+                            <div class="chip" onclick="toggleChip(this)" data-subject="Chemistry"><i class="fa-solid fa-flask text-[10px]"></i> Chemistry</div>
+                            <div class="chip" onclick="toggleChip(this)" data-subject="Biology"><i class="fa-solid fa-dna text-[10px]"></i> Biology</div>
+                            <div class="chip" onclick="toggleChip(this)" data-subject="English"><i class="fa-solid fa-pen-nib text-[10px]"></i> English</div>
+                            <div class="chip" onclick="toggleChip(this)" data-subject="History"><i class="fa-solid fa-landmark text-[10px]"></i> History</div>
+                            <div class="chip" onclick="toggleChip(this)" data-subject="Computer Science"><i class="fa-solid fa-code text-[10px]"></i> Computer Science</div>
+                            <div class="chip" onclick="toggleChip(this)" data-subject="Economics"><i class="fa-solid fa-chart-bar text-[10px]"></i> Economics</div>
+                            <div class="chip" onclick="toggleChip(this)" data-subject="Geography"><i class="fa-solid fa-earth-americas text-[10px]"></i> Geography</div>
+                            <div class="chip" onclick="toggleChip(this)" data-subject="Literature"><i class="fa-solid fa-book-open text-[10px]"></i> Literature</div>
+                        </div>
+                    </div>
+
+                    <!-- Validation message area -->
+                    <p class="text-xs text-red-400 hidden mb-3" id="academicsError">
+                        <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                        Please select a level and at least one subject
+                    </p>
+
+                    <div class="flex gap-3 mt-4">
+                        <button type="button" class="btn-ghost" onclick="goToStep(2)">
+                            <i class="fa-solid fa-arrow-left mr-1 text-xs"></i> Back
+                        </button>
+                        <button type="button" class="btn-primary flex-1" onclick="handleAcademics()">Continue</button>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ==================== STEP 4: DONE ==================== -->
+            <div class="step" id="step4">
+                <div class="text-center max-w-sm mx-auto px-6">
+                    <div class="flex justify-center mb-8">
+                        <div class="check-circle" id="checkAnim">
+                            <i class="fa-solid fa-check text-white text-2xl"></i>
+                        </div>
+                    </div>
+
+                    <h2 class="font-display text-2xl font-bold text-white mb-2">You're All Set</h2>
+                    <p class="text-slate-400 text-sm mb-8">
+                        Your profile is ready, <span class="text-cyan-400 font-medium" id="doneName">Alex</span>. Time to put it to use.
+                    </p>
+
+                    <!-- Quick summary -->
+                    <div class="rounded-xl p-4 mb-8 text-left space-y-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Level</span>
+                            <span class="text-slate-300" id="summaryLevel">—</span>
+                        </div>
+                        <div class="h-px" style="background: rgba(255,255,255,0.05);"></div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Subjects</span>
+                            <span class="text-slate-300" id="summarySubjects">—</span>
+                        </div>
+                        <div class="h-px" style="background: rgba(255,255,255,0.05);"></div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Next step</span>
+                            <span class="text-cyan-400">Enter your first term results</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary w-full" onclick="handleFinish()">
+                        Go to Dashboard
+                        <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div><!-- /steps -->
+    </div><!-- /main container -->
+
+
+    <!-- ===================== SCRIPTS ===================== -->
+    <script>
+        let currentStep = 1;
+        const totalSteps = 4;
+        let formData = { name: '', email: '', password: '', level: '', subjects: [] };
+
+        function goToStep(step) {
+            if (step === currentStep) return;
+
+            const current = document.getElementById(`step${currentStep}`);
+            const next = document.getElementById(`step${step}`);
+            const goingForward = step > currentStep;
+
+            // Exit current
+            current.classList.remove('active');
+            current.classList.add(goingForward ? 'exit-left' : '');
+            current.style.transform = goingForward ? 'translateX(-40px)' : 'translateX(40px)';
+            current.style.opacity = '0';
+
+            // Prep next
+            next.style.transform = goingForward ? 'translateX(40px)' : 'translateX(-40px)';
+            next.style.opacity = '0';
+            next.classList.remove('exit-left');
+
+            // Small delay so CSS transition triggers
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    next.classList.add('active');
+                });
+            });
+
+            // Update progress
+            currentStep = step;
+            const pct = ((step - 1) / (totalSteps - 1)) * 100;
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('stepLabel').textContent = `${step} / ${totalSteps}`;
+
+            // Re-trigger check animation on step 4
+            if (step === 4) {
+                const check = document.getElementById('checkAnim');
+                check.style.animation = 'none';
+                check.offsetHeight; // force reflow
+                check.style.animation = '';
+            }
+        }
+
+        function handleProfile(e) {
+            e.preventDefault();
+            formData.name = document.getElementById('fullName').value.trim();
+            formData.email = document.getElementById('email').value.trim();
+            formData.password = document.getElementById('password').value;
+
+            if (formData.name && formData.email && formData.password.length >= 6) {
+                goToStep(3);
+            }
+            return false;
+        }
+
+        function selectLevel(el) {
+            document.querySelectorAll('.level-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            formData.level = el.dataset.level;
+        }
+
+        function toggleChip(el) {
+            el.classList.toggle('selected');
+            const subject = el.dataset.subject;
+            if (formData.subjects.includes(subject)) {
+                formData.subjects = formData.subjects.filter(s => s !== subject);
+            } else {
+                formData.subjects.push(subject);
+            }
+        }
+
+        function handleAcademics() {
+            const errEl = document.getElementById('academicsError');
+            if (!formData.level || formData.subjects.length === 0) {
+                errEl.classList.remove('hidden');
+                return;
+            }
+            errEl.classList.add('hidden');
+
+            // Populate summary
+            const levelMap = { 'high-school': 'High School', 'undergrad': 'Undergraduate', 'postgrad': 'Postgraduate' };
+            document.getElementById('summaryLevel').textContent = levelMap[formData.level] || formData.level;
+            document.getElementById('summarySubjects').textContent = formData.subjects.join(', ');
+            document.getElementById('doneName').textContent = formData.name.split(' ')[0];
+
+            goToStep(4);
+        }
+
+        function handleFinish() {
+            /*
+             * POST to backend with formData
+             * Backend AI will handle: /api/onboarding
+             *
+             * fetch('/api/onboarding', {
+             *     method: 'POST',
+             *     headers: { 'Content-Type': 'application/json' },
+             *     body: JSON.stringify(formData)
+             * }).then(res => {
+             *     if (res.ok) window.location.href = '/dashboard';
+             * });
+             */
+
+            // For now, redirect to dashboard route
+            window.location.href = '{{ url_for("dashboard") }}';
+        }
+    </script>
+
+</body>
+</html>
