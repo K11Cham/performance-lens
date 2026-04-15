@@ -1,0 +1,305 @@
+{% extends "base.jinja" %}
+
+{% block title %}Recommendations — PerformanceLens{% endblock %}
+{% block page_title %}Recommendations{% endblock %}
+
+{% block content %}
+<div id="rec-loading" class="flex items-center justify-center py-32">
+  <div class="text-center">
+    <i class="fa-solid fa-spinner fa-spin text-2xl text-cyan-400 mb-3 block" aria-hidden="true"></i>
+    <p class="text-sm text-slate-400">Building suggestions…</p>
+  </div>
+</div>
+
+<div id="rec-content" class="hidden max-w-3xl mx-auto space-y-8 fade-in"></div>
+
+<div id="rec-error" class="hidden max-w-lg mx-auto py-24 px-4 text-center text-sm text-red-300">
+  Could not load recommendations. Please refresh.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  var STUDY_URL = '{{ url_for("main.study_schedule") }}';
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function gradeBadge(g) {
+    if (!g) return '';
+    return '<span class="ml-2 inline-flex rounded-md bg-slate-800 px-2 py-0.5 text-[11px] font-bold text-slate-300">' + escapeHtml(g) + '</span>';
+  }
+
+  function sectionShell(title, subtitle, inner) {
+    return (
+      '<section class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-6">' +
+      '<h3 class="font-display text-lg font-bold text-white">' + escapeHtml(title) + '</h3>' +
+      (subtitle ? '<p class="mt-1 text-xs text-slate-500">' + subtitle + '</p>' : '') +
+      '<div class="mt-4">' + inner + '</div></section>'
+    );
+  }
+
+  function renderShiftRow(x, deltaClass) {
+    return (
+      '<tr class="border-b border-slate-800/40 text-sm last:border-0">' +
+      '<td class="py-2 pr-2 font-medium text-slate-200">' + escapeHtml(x.subject) + '</td>' +
+      '<td class="py-2 tabular-nums text-slate-400">' + x.previous + ' → ' + x.latest + '</td>' +
+      '<td class="py-2 text-right tabular-nums ' + deltaClass + '">' + (x.delta > 0 ? '+' : '') + x.delta + '</td></tr>'
+    );
+  }
+
+  function render(data) {
+    var wrap = document.getElementById('rec-content');
+    var html = '';
+
+    html += '<header class="space-y-2">';
+    html += '<p class="text-xs font-semibold uppercase tracking-wider text-cyan-400/90">Recommendations</p>';
+    html += '<h2 class="font-display text-2xl font-bold text-white sm:text-3xl">What to focus on next</h2>';
+    html += '<p class="text-sm text-slate-400 leading-relaxed">' + escapeHtml(data.summary) + '</p>';
+    html += '<p class="flex flex-wrap gap-3 pt-2 text-sm">';
+    html += '<a href="{{ url_for('main.analysis') }}" class="text-cyan-400 hover:underline">Open analysis</a>';
+    html += '<span class="text-slate-700">·</span>';
+    html += '<a href="{{ url_for('main.input') }}" class="text-cyan-400 hover:underline">Manage results</a>';
+    html += '<span class="text-slate-700">·</span>';
+    html += '<a href="' + STUDY_URL + '" class="font-semibold text-cyan-400 hover:underline">Study schedule</a>';
+    html += '</p></header>';
+
+    if (!data.has_data) {
+      html += '<div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-6 text-sm text-slate-500">';
+      html += 'Upload term results to see subject priorities, term trends, action plans, and a personalized weekly study schedule.';
+      html += '</div>';
+      wrap.innerHTML = html;
+      return;
+    }
+
+    if (data.pulse) {
+      var p = data.pulse;
+      var pulseInner =
+        '<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">' +
+        '<div class="rounded-lg border border-slate-800 bg-slate-900 p-4"><p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Overall average</p><p class="mt-1 font-display text-2xl font-bold text-white">' + p.overall_average + '%</p></div>' +
+        '<div class="rounded-lg border border-slate-800 bg-slate-900 p-4"><p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Subjects</p><p class="mt-1 font-display text-2xl font-bold text-slate-200">' + p.subjects_count + '</p></div>' +
+        '<div class="rounded-lg border border-slate-800 bg-slate-900 p-4"><p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Term periods</p><p class="mt-1 font-display text-2xl font-bold text-slate-200">' + p.terms_count + '</p></div>' +
+        '<div class="rounded-lg border border-slate-800 bg-slate-900 p-4 sm:col-span-2 lg:col-span-3"><p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Latest term</p><p class="mt-1 text-sm text-slate-300">' + escapeHtml(p.latest_term || '—') + '</p>' +
+        '<p class="mt-2 text-xs text-slate-500">Spread across subject averages (stdev): <span class="tabular-nums text-slate-400">' + p.spread_across_subjects + '</span> pts</p></div></div>';
+      html += sectionShell('Snapshot', 'High-level context from everything you have saved.', pulseInner);
+    }
+
+    html += '<section class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-6">';
+    html += '<h3 class="font-display text-lg font-bold text-white">Priority subjects</h3>';
+    html += '<p class="mt-1 text-xs text-slate-500">Lowest lifetime averages — structured plans below translate this into concrete study moves.</p>';
+    html += '<ul class="mt-4 space-y-3">';
+    if (data.focus && data.focus.length) {
+      data.focus.forEach(function (s) {
+        html += '<li class="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-800/40 pb-3 last:border-0 last:pb-0">';
+        html += '<span class="font-medium text-slate-200">' + escapeHtml(s.name) + gradeBadge(s.grade) + '</span>';
+        html += '<span class="tabular-nums text-sm text-slate-400">' + s.average + '%';
+        if (s.next_grade && s.next_grade.gap != null && s.next_grade.gap > 0) {
+          html += ' <span class="text-slate-600">·</span> ~' + s.next_grade.gap + ' pts to ' + escapeHtml(s.next_grade.grade);
+        }
+        html += '</span></li>';
+      });
+    } else {
+      html += '<li class="text-sm text-slate-600">No subjects yet.</li>';
+    }
+    html += '</ul></section>';
+
+    html += '<section class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-6">';
+    html += '<h3 class="font-display text-lg font-bold text-white">Strengths to keep</h3>';
+    html += '<p class="mt-1 text-xs text-slate-500">High averages — protect these with light maintenance so they do not slip when you push weaker areas.</p>';
+    html += '<ul class="mt-4 space-y-3">';
+    if (data.strengths && data.strengths.length) {
+      data.strengths.forEach(function (s) {
+        html += '<li class="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-800/40 pb-3 last:border-0 last:pb-0">';
+        html += '<span class="font-medium text-slate-200">' + escapeHtml(s.name) + gradeBadge(s.grade) + '</span>';
+        html += '<span class="tabular-nums text-sm text-emerald-400/90">' + s.average + '%</span></li>';
+      });
+    } else {
+      html += '<li class="text-sm text-slate-600">No subjects yet.</li>';
+    }
+    html += '</ul></section>';
+
+    if (data.consistency) {
+      var c = data.consistency;
+      html += sectionShell(
+        'Balance across subjects',
+        escapeHtml(c.note),
+        '<p class="text-sm text-slate-400">Standard deviation of subject averages: <span class="tabular-nums font-semibold text-slate-200">' + c.stdev_across_subject_averages + '</span> percentage points.</p>'
+      );
+    }
+
+    if (data.shifts && (data.shifts.biggest_gain || data.shifts.biggest_drop)) {
+      html += '<section class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-6">';
+      html += '<h3 class="font-display text-lg font-bold text-white">Latest term vs previous</h3>';
+      html += '<p class="mt-1 text-xs text-slate-500">Comparing <span class="text-slate-400">' + escapeHtml(data.shifts.latest_term) + '</span> to <span class="text-slate-400">' + escapeHtml(data.shifts.previous_term) + '</span> (shared subjects only';
+      if (data.shifts.all_count != null) html += ', n=' + data.shifts.all_count;
+      html += ').</p>';
+      html += '<div class="mt-4 grid gap-4 sm:grid-cols-2">';
+      if (data.shifts.biggest_gain) {
+        var g = data.shifts.biggest_gain;
+        html += '<div class="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">';
+        html += '<p class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400/80">Largest gain</p>';
+        html += '<p class="mt-2 font-medium text-white">' + escapeHtml(g.subject) + '</p>';
+        html += '<p class="mt-1 text-sm text-emerald-400">+' + g.delta + ' pts <span class="text-slate-500">(' + g.previous + ' → ' + g.latest + ')</span></p></div>';
+      }
+      if (data.shifts.biggest_drop) {
+        var d = data.shifts.biggest_drop;
+        html += '<div class="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">';
+        html += '<p class="text-[11px] font-semibold uppercase tracking-wider text-amber-400/80">Largest slip</p>';
+        html += '<p class="mt-2 font-medium text-white">' + escapeHtml(d.subject) + '</p>';
+        html += '<p class="mt-1 text-sm text-amber-400">' + d.delta + ' pts <span class="text-slate-500">(' + d.previous + ' → ' + d.latest + ')</span></p></div>';
+      }
+      html += '</div></section>';
+    }
+
+    if (data.shift_leaders && (data.shift_leaders.declines && data.shift_leaders.declines.length || data.shift_leaders.gains && data.shift_leaders.gains.length)) {
+      var sl = data.shift_leaders;
+      var leadersHtml = '<div class="grid gap-6 lg:grid-cols-2">';
+      if (sl.declines && sl.declines.length) {
+        leadersHtml += '<div><p class="text-[11px] font-semibold uppercase tracking-wider text-amber-400/80">Largest declines</p><table class="mt-2 w-full"><thead><tr class="text-left text-[11px] text-slate-500"><th class="pb-1 font-medium">Subject</th><th class="pb-1 font-medium">Scores</th><th class="pb-1 text-right font-medium">Δ</th></tr></thead><tbody>';
+        sl.declines.forEach(function (x) { leadersHtml += renderShiftRow(x, 'text-amber-400'); });
+        leadersHtml += '</tbody></table></div>';
+      }
+      if (sl.gains && sl.gains.length) {
+        leadersHtml += '<div><p class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400/80">Largest gains</p><table class="mt-2 w-full"><thead><tr class="text-left text-[11px] text-slate-500"><th class="pb-1 font-medium">Subject</th><th class="pb-1 font-medium">Scores</th><th class="pb-1 text-right font-medium">Δ</th></tr></thead><tbody>';
+        sl.gains.forEach(function (x) { leadersHtml += renderShiftRow(x, 'text-emerald-400'); });
+        leadersHtml += '</tbody></table></div>';
+      }
+      leadersHtml += '</div>';
+      html += sectionShell('Term-to-term movers', 'Top five drops and rises — use this to decide where to re-stabilize vs double down.', leadersHtml);
+    }
+
+    if (data.volatility_watch && data.volatility_watch.length) {
+      var volInner = '<ul class="space-y-3">';
+      data.volatility_watch.forEach(function (v) {
+        volInner +=
+          '<li class="rounded-lg border border-slate-800 bg-slate-900 p-4">' +
+          '<p class="font-medium text-slate-200">' + escapeHtml(v.subject) + ' <span class="text-xs font-normal text-slate-500">· σ=' + v.stdev + ' over ' + v.terms + ' terms</span></p>' +
+          '<p class="mt-1 text-sm text-slate-400">' + escapeHtml(v.note) + '</p></li>';
+      });
+      volInner += '</ul>';
+      html += sectionShell('Volatility watch', 'Subjects with large swings between terms — consistency beats intensity here.', volInner);
+    }
+
+    if (data.at_risk_grades && data.at_risk_grades.length) {
+      var arInner = '<ul class="space-y-3">';
+      data.at_risk_grades.forEach(function (a) {
+        arInner +=
+          '<li class="rounded-lg border border-red-500/15 bg-red-500/5 p-4">' +
+          '<p class="font-medium text-slate-200">' + escapeHtml(a.subject) + gradeBadge(a.grade) + ' <span class="text-sm font-normal text-slate-400">' + a.average + '%</span></p>' +
+          '<p class="mt-1 text-xs text-slate-500">Only <span class="tabular-nums text-amber-200/90">' + a.margin_above_floor + '</span> pts above the floor of this band.</p>' +
+          '<p class="mt-1 text-sm text-slate-400">' + escapeHtml(a.note) + '</p></li>';
+      });
+      arInner += '</ul>';
+      html += sectionShell('Grade band risk', 'Averages sitting near the bottom edge of their letter band — small slips have outsized impact.', arInner);
+    }
+
+    if (data.trajectories && data.trajectories.length) {
+      var trInner = '<ul class="space-y-2">';
+      data.trajectories.forEach(function (t) {
+        var col = t.label === 'upward' ? 'text-emerald-400' : t.label === 'downward' ? 'text-amber-400' : 'text-slate-400';
+        trInner +=
+          '<li class="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-800/40 py-2 text-sm last:border-0">' +
+          '<span class="font-medium text-slate-200">' + escapeHtml(t.subject) + '</span>' +
+          '<span class="text-slate-500">' + t.first_score + ' → ' + t.latest_score + ' <span class="' + col + '">(' + t.label + ', ' + (t.delta_terms > 0 ? '+' : '') + t.delta_terms + ')</span></span></li>';
+      });
+      trInner += '</ul>';
+      html += sectionShell('Long-run trajectories', 'First recorded term to latest — separate structural trend from one-off terms.', trInner);
+    }
+
+    if (data.study_time_suggestion) {
+      var st = data.study_time_suggestion;
+      html += sectionShell(
+        'Suggested weekly study volume',
+        escapeHtml(st.rationale),
+        '<p class="text-sm text-slate-300">Heuristic range: <span class="font-display text-xl font-bold text-cyan-400/90">' + st.min_hours_week + '–' + st.max_hours_week + '</span> hours per week.</p>' +
+        '<p class="mt-3 text-xs text-slate-500">Plug this into the planner with your real free-time windows — the app will split it across subjects automatically.</p>'
+      );
+    }
+
+    if (data.action_plans && data.action_plans.length) {
+      html += '<section class="rounded-xl border border-cyan-500/20 bg-[#0F172A] p-6">';
+      html += '<h3 class="font-display text-lg font-bold text-white">Subject action plans</h3>';
+      html += '<p class="mt-1 text-xs text-slate-500">Concrete sequences (not a vague checklist): each step is meant to be done in order over the next week or two.</p>';
+      html += '<div class="mt-5 space-y-5">';
+      data.action_plans.forEach(function (ap) {
+        var urg = ap.urgency === 'high' ? 'border-l-amber-500/80' : 'border-l-emerald-500/50';
+        html += '<article class="border-l-4 ' + urg + ' pl-4">';
+        html += '<h4 class="font-display text-base font-bold text-white">' + escapeHtml(ap.subject) + gradeBadge(ap.grade) + ' <span class="text-sm font-normal text-slate-500">' + ap.average + '%</span></h4>';
+        html += '<ol class="mt-3 list-decimal space-y-3 pl-5 text-sm text-slate-300">';
+        (ap.steps || []).forEach(function (step) {
+          html += '<li><span class="font-semibold text-slate-200">' + escapeHtml(step.title) + '</span><p class="mt-1 text-slate-400 leading-relaxed">' + escapeHtml(step.detail) + '</p></li>';
+        });
+        html += '</ol></article>';
+      });
+      html += '</div></section>';
+    }
+
+    if (data.habits && data.habits.length) {
+      var habInner = '<ul class="space-y-4">';
+      data.habits.forEach(function (h) {
+        habInner +=
+          '<li class="rounded-lg border border-slate-800 bg-slate-900 p-4">' +
+          '<p class="font-semibold text-slate-200">' + escapeHtml(h.title) + '</p>' +
+          '<p class="mt-1 text-sm text-slate-400 leading-relaxed">' + escapeHtml(h.body) + '</p></li>';
+      });
+      habInner += '</ul>';
+      html += sectionShell('Cross-subject habits', 'Systems that support everything on your card — pair with timed blocks on the study schedule page.', habInner);
+    }
+
+    if (data.all_ranked && data.all_ranked.length) {
+      var rankInner = '<ul class="max-h-64 overflow-y-auto space-y-2 pr-1 text-sm">';
+      data.all_ranked.forEach(function (s, idx) {
+        rankInner +=
+          '<li class="flex justify-between gap-2 border-b border-slate-800/30 py-1.5 text-slate-300 last:border-0">' +
+          '<span><span class="tabular-nums text-slate-600">' + (idx + 1) + '.</span> ' + escapeHtml(s.name) + gradeBadge(s.grade) + '</span>' +
+          '<span class="tabular-nums text-slate-400">' + s.average + '%</span></li>';
+      });
+      rankInner += '</ul>';
+      html += sectionShell('Full subject ranking', 'Lifetime average descending — use for sanity checks when allocating discretionary time.', rankInner);
+    }
+
+    html += '<section class="rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-6">';
+    html += '<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">';
+    html += '<div><h3 class="font-display text-lg font-bold text-white">Turn this into a weekly timetable</h3>';
+    html += '<p class="mt-1 max-w-xl text-sm text-slate-400">Add your real free-time ranges, tune weak-subject emphasis, and download a PDF you can keep on your phone or print.</p></div>';
+    html += '<a href="' + STUDY_URL + '" class="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-lg bg-cyan-400 px-5 py-3 text-sm font-bold text-[#0B1120] transition hover:bg-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">';
+    html += '<i class="fa-solid fa-calendar-week" aria-hidden="true"></i> Open study schedule</a>';
+    html += '</div></section>';
+
+    if (data.meta_disclaimer) {
+      html += '<p class="text-center text-[11px] leading-relaxed text-slate-600">' + escapeHtml(data.meta_disclaimer) + '</p>';
+    }
+
+    wrap.innerHTML = html;
+  }
+
+  function show() {
+    document.getElementById('rec-loading').classList.add('hidden');
+    document.getElementById('rec-error').classList.add('hidden');
+    document.getElementById('rec-content').classList.remove('hidden');
+    if (typeof gsap !== 'undefined') {
+      var sections = document.querySelectorAll('#rec-content > *');
+      if (sections.length) {
+        gsap.from(sections, { autoAlpha: 0, y: 12, duration: 0.35, stagger: 0.05, ease: 'power2.out', delay: 0.05 });
+      }
+    }
+  }
+
+  fetch("{{ url_for('main.api_recommendations') }}")
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      render(data);
+      show();
+    })
+    .catch(function () {
+      document.getElementById('rec-loading').classList.add('hidden');
+      document.getElementById('rec-error').classList.remove('hidden');
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,1210 @@
+{% extends "base.jinja" %}
+
+{% block title %}{% if active_page == 'study' %}Study Schedules — PerformanceLens{% else %}Schedule Maker — PerformanceLens{% endif %}{% endblock %}
+{% block page_title %}{% if active_page == 'study' %}Study Schedules{% else %}Schedule Maker{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl space-y-8 pb-16">
+
+  <header class="rounded-xl border border-slate-800 bg-[#0F172A] px-4 py-5 sm:px-6 fade-in">
+    <p class="text-xs font-semibold uppercase tracking-wider text-cyan-400/90">{% if active_page == 'study' %}Library{% else %}Planner{% endif %}</p>
+    <h2 class="font-display mt-1 text-xl font-bold text-white sm:text-2xl">{% if active_page == 'study' %}Your study schedules{% else %}Create your study schedule{% endif %}</h2>
+    <p class="mt-2 max-w-2xl text-sm text-slate-400 leading-relaxed">
+      {% if active_page == 'study' %}
+        View and manage all your generated study schedules. Click on any schedule to see the full plan.
+      {% else %}
+        Add every window when you can study (multiple ranges per day). Tune how hard the planner pushes weak subjects, then generate a plan.
+        Your schedule is stored here so you can view it anytime in the Study Schedules page.
+      {% endif %}
+    </p>
+    {% if active_page != 'study' %}
+    <p class="mt-3 flex flex-wrap gap-3 text-sm">
+      <a href="{{ url_for('main.recommendations') }}" class="text-cyan-400 hover:underline">Back to recommendations</a>
+      <span class="text-slate-700">·</span>
+      <a href="{{ url_for('main.input') }}" class="text-cyan-400 hover:underline">Manage results</a>
+    </p>
+    {% endif %}
+  </header>
+
+  {% if active_page == 'study' %}
+  <!-- Study schedules list -->
+  <div id="study-schedules-loading" class="flex items-center justify-center py-32">
+    <div class="text-center">
+      <i class="fa-solid fa-spinner fa-spin text-2xl text-cyan-400 mb-3 block" aria-hidden="true"></i>
+      <p class="text-sm text-slate-400">Loading your schedules...</p>
+    </div>
+  </div>
+
+  <div id="study-schedules-content" class="hidden space-y-6">
+    <div id="study-schedules-list" class="space-y-4"></div>
+    <div id="study-schedules-empty" class="hidden text-center py-16">
+      <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-400/10">
+        <i class="fa-solid fa-calendar-week text-2xl text-cyan-400" aria-hidden="true"></i>
+      </div>
+      <h3 class="font-display text-xl font-bold text-white">No study schedules yet</h3>
+      <p class="mt-2 text-sm text-slate-400">Create your first study schedule to see it here.</p>
+      <a href="{{ url_for('main.study_schedule') }}" class="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-lg bg-cyan-400 px-8 py-3 text-sm font-bold text-[#0B1120] transition hover:bg-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">
+        Create study schedule
+      </a>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Study schedule creation form -->
+
+  <div id="study-msg" class="hidden rounded-lg border px-4 py-3 shadow-lg smooth-transition" role="status" aria-live="polite">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+      <p id="study-msg-text" class="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-relaxed"></p>
+      <button type="button" id="study-msg-dismiss" class="hidden min-h-[40px] shrink-0 rounded-md border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400 smooth-transition">Dismiss</button>
+    </div>
+  </div>
+
+  <section class="rounded-xl border border-slate-800 bg-[#0F172A] p-5 sm:p-6 fade-in-up" aria-labelledby="avail-heading">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h2 id="avail-heading" class="font-display text-lg font-bold text-white">Weekly availability</h2>
+        <p class="mt-1 text-xs text-slate-300 max-w-2xl leading-relaxed">
+          Pick a day (tabs above), then add windows with the time fields. The bar is a <strong class="font-medium text-slate-200">preview only</strong> — it updates from your entries (15-minute steps).
+        </p>
+      </div>
+      <p class="text-xs text-slate-300 tabular-nums shrink-0">Free time this week: <span id="week-free-mins" class="font-semibold text-white">0</span> min</p>
+    </div>
+
+    <fieldset class="mt-5 space-y-3 border-0 p-0 m-0">
+      <legend class="sr-only">Free study time for each day of the week</legend>
+      <p id="manual-form-desc" class="text-xs text-slate-400">Switch days with the tabs. Use <strong class="font-medium text-slate-200">Add time window</strong> for split schedules. End of day is <strong class="font-medium text-slate-200">23:45</strong>.</p>
+      <div id="manual-availability-root" class="space-y-2" role="group" aria-describedby="manual-form-desc"></div>
+    </fieldset>
+
+    <div class="mt-5 flex flex-wrap gap-3">
+      <button type="button" id="btn-save-availability" class="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:border-cyan-500 hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">
+        Save availability
+      </button>
+      <button type="button" id="btn-random-availability" class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-400 transition hover:border-slate-500 hover:text-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">
+        <i class="fa-solid fa-shuffle text-xs" aria-hidden="true"></i>
+        Fill random (testing)
+      </button>
+    </div>
+  </section>
+
+  <div class="grid gap-8 lg:grid-cols-2">
+    <div class="space-y-8">
+  <section class="rounded-xl border border-slate-800 bg-[#0F172A] p-5 sm:p-6 fade-in-up" style="animation-delay: 0.2s;" aria-labelledby="prefs-heading">
+        <h2 id="prefs-heading" class="font-display text-lg font-bold text-white">Personalization</h2>
+        <p class="mt-1 text-xs text-slate-500">Weights come from your saved subject averages; weak subjects are the five lowest. These knobs shape how time is split and packed.</p>
+        <form id="prefs-form" class="mt-5 space-y-5">
+          <div>
+            <label for="pref-weak-mult" class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Weak subject emphasis</label>
+            <p class="mt-0.5 text-[11px] text-slate-600">Multiplier on priority subjects (higher = more minutes).</p>
+            <input type="range" id="pref-weak-mult" name="weak_subject_multiplier" min="1" max="2.5" step="0.05" class="mt-2 w-full accent-cyan-400" />
+            <p class="mt-1 text-xs text-cyan-400/90 tabular-nums"><span id="pref-weak-mult-val">1.75</span>×</p>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="pref-session" class="block text-xs font-semibold text-slate-500">Target session length (min)</label>
+              <input type="number" id="pref-session" name="session_length_min" min="15" max="120" step="5" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label for="pref-break" class="block text-xs font-semibold text-slate-500">Break between blocks (min)</label>
+              <input type="number" id="pref-break" name="break_min" min="0" max="45" step="1" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label for="pref-max-blocks" class="block text-xs font-semibold text-slate-500">Max study blocks / day</label>
+              <input type="number" id="pref-max-blocks" name="max_blocks_per_day" min="1" max="16" step="1" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label for="pref-min-sess" class="block text-xs font-semibold text-slate-500">Minimum block (min)</label>
+              <input type="number" id="pref-min-sess" name="min_session_min" min="10" max="60" step="5" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" />
+            </div>
+          </div>
+          <div>
+            <label for="pref-weekend" class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Weekend use of free time</label>
+            <p class="mt-0.5 text-[11px] text-slate-600">100% uses full Sat/Sun windows; lower values shrink effective weekend length for planning.</p>
+            <input type="range" id="pref-weekend" name="weekend_intensity" min="20" max="100" step="5" class="mt-2 w-full accent-cyan-400" />
+            <p class="mt-1 text-xs text-cyan-400/90 tabular-nums"><span id="pref-weekend-val">100</span>%</p>
+          </div>
+          <div>
+            <label for="pref-reserve" class="block text-xs font-semibold text-slate-500">Reserve (min/week)</label>
+            <p class="mt-0.5 text-[11px] text-slate-600">Minutes left unscheduled for clubs, chores, and slack.</p>
+            <input type="number" id="pref-reserve" name="reserve_weekly_minutes" min="0" max="600" step="15" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" />
+          </div>
+          <button type="submit" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:border-cyan-500 hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 sm:w-auto">
+            Save preferences
+          </button>
+        </form>
+      </section>
+    </div>
+
+    <div class="space-y-8">
+      <section class="rounded-xl border border-slate-800 bg-[#0F172A] p-5 sm:p-6 fade-in-up" style="animation-delay: 0.4s;" aria-labelledby="gen-heading">
+        <h2 id="gen-heading" class="font-display text-lg font-bold text-white">Generate</h2>
+        <p class="mt-1 text-xs text-slate-500">Needs saved subject results, a plan name, and about 45+ minutes of weekly availability. Building also saves your current availability from the form above.</p>
+        <div class="mt-4 space-y-3">
+          <label for="plan-title" class="block text-xs font-semibold text-slate-500">Plan name <abbr title="required" class="text-red-400 no-underline">*</abbr></label>
+          <input type="text" id="plan-title" name="plan_title" required aria-required="true" autocomplete="off" class="w-full min-h-[44px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-white placeholder:text-slate-600" placeholder="e.g. March exam prep" maxlength="120" />
+        </div>
+        <button type="button" id="btn-generate" class="mt-4 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-cyan-400 px-5 py-3 text-sm font-bold text-[#0B1120] transition hover:bg-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">
+          <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+          Build schedule
+        </button>
+      </section>
+
+  <section class="rounded-xl border border-slate-800 bg-[#0F172A] p-5 sm:p-6 fade-in-up" style="animation-delay: 0.6s;" aria-labelledby="saved-heading">
+    <h2 id="saved-heading" class="font-display text-lg font-bold text-white">Saved schedules</h2>
+    <p class="mt-1 text-xs text-slate-500">Your generated study schedules. Click to view full details.</p>
+    <div id="saved-schedules-loading" class="flex items-center justify-center py-8 hidden">
+      <div class="text-center">
+        <i class="fa-solid fa-spinner fa-spin text-xl text-cyan-400 mb-2 block" aria-hidden="true"></i>
+        <p class="text-xs text-slate-400">Loading schedules...</p>
+      </div>
+    </div>
+    <div id="saved-schedules-content" class="mt-4 space-y-4"></div>
+    <p id="saved-empty" class="mt-4 text-sm text-slate-600">No saved plans yet.</p>
+  </section>
+  {% endif %}
+
+  <!-- Full Screen Modal -->
+  <div id="fullscreen-modal" class="fixed inset-0 z-[9999] hidden bg-black/95 backdrop-blur-sm">
+    <div class="h-full w-full overflow-y-auto p-4 md:p-8">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-4 flex justify-between items-center">
+          <h2 class="font-display text-xl font-bold text-white">Study Schedule - Full Screen</h2>
+          <button type="button" id="close-fullscreen-btn" class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-300 hover:border-cyan-500 hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400">
+            <i class="fa-solid fa-times" aria-hidden="true"></i>
+            Close
+          </button>
+        </div>
+        <div id="fullscreen-content" class="rounded-xl border border-slate-800 bg-[#0F172A] p-6 text-sm">
+          <!-- Content will be copied here -->
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+  /* Native time input — force dark chrome on all browsers */
+  .time-input {
+    color-scheme: dark;
+  }
+  .time-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+    opacity: 0.6;
+  }
+  .time-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+  /* Day tab baseline — consistent border so active/inactive never shift height */
+  .day-pill {
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .day-pill[aria-selected="true"] {
+    color: white;
+  }
+  .day-pill[aria-selected="false"] {
+    color: rgb(148 163 184); /* slate-400 */
+  }
+  .day-pill[aria-selected="false"]:hover {
+    color: rgb(226 232 240); /* slate-200 */
+  }
+  /* Invalid range row highlight */
+  .manual-row.range-invalid .manual-end {
+    border-color: rgb(239 68 68) !important;
+  }
+  .range-invalid-hint {
+    font-size: 11px;
+    color: rgb(252 165 165);
+    margin-top: 2px;
+  }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  {% if active_page == 'study' %}
+  // ── Study schedules list page ───────────────────────────────────────────────
+  var URLS = { schedules: '{{ url_for("main.api_study_schedules_list") }}' };
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function loadSchedules() {
+    console.log('Loading schedules...');
+    var loading = document.getElementById('study-schedules-loading');
+    var content = document.getElementById('study-schedules-content');
+    var list    = document.getElementById('study-schedules-list');
+    var empty   = document.getElementById('study-schedules-empty');
+
+    // Never allow an infinite spinner: abort after 12s and always flip UI.
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var t = setTimeout(function () { try { if (ctrl) ctrl.abort(); } catch (e) {} }, 12000);
+
+    console.log('Fetching schedules from:', URLS.schedules);
+    fetch(URLS.schedules, { method: 'GET', credentials: 'same-origin', signal: ctrl ? ctrl.signal : undefined })
+      .then(function(res){
+        console.log('Response status:', res.status);
+        return res.text().then(function(text){
+          console.log('Response text:', text);
+          var j = {};
+          try { j = text && text.trim() ? JSON.parse(text) : {}; } catch(e) { 
+            console.error('JSON parse error:', e);
+            j = { message: text || '' }; 
+          }
+          return { ok: res.ok, status: res.status, j: j };
+        });
+      })
+      .then(function(x){
+        if (loading) loading.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+        if (!x.ok) {
+          if (empty) empty.classList.remove('hidden');
+          if (content) content.innerHTML = '';
+          if (window.toast) {
+            window.toast({ text: (x.j && x.j.message) ? x.j.message : ('Could not load schedules (HTTP ' + x.status + ').'), kind: 'error' });
+          }
+          return;
+        }
+
+        var data = x.j || {};
+        var schedules = data.schedules || [];
+        if (!schedules.length) {
+          if (empty) empty.classList.remove('hidden');
+          if (content) content.innerHTML = '';
+          return;
+        }
+
+        if (empty) empty.classList.add('hidden');
+        if (content) {
+          content.innerHTML = schedules.map(function(schedule){
+            var created = new Date(schedule.created_at);
+            var formattedDate = created.toLocaleDateString() + ' at ' + created.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+            return '<div class="rounded-xl border border-slate-800 bg-[#0F172A] p-5 sm:p-6">' +
+              '<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">' +
+                '<div>' +
+                  '<h3 class="font-display text-lg font-bold text-white">' + escapeHtml(schedule.title) + '</h3>' +
+                  '<p class="mt-1 text-xs text-slate-500">Created ' + formattedDate + '</p>' +
+                '</div>' +
+                '<div class="flex gap-2">' +
+                  '<a href="' + schedule.preview_url + '" class="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-cyan-500 bg-cyan-500 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-600">' +
+                    '<i class="fa-solid fa-eye" aria-hidden="true"></i> View' +
+                  '</a>' +
+                  '<button type="button" class="btn-fullscreen-schedule inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 hover:border-cyan-500 hover:bg-slate-700" data-id="' + schedule.id + '">' +
+                    '<i class="fa-solid fa-expand" aria-hidden="true"></i> Full Screen' +
+                  '</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('');
+        }
+        
+        // Add event listeners for full screen buttons
+        content.querySelectorAll('.btn-fullscreen-schedule').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var scheduleId = this.getAttribute('data-id');
+            fetch(schedule.preview_url.replace('/api/study/schedules/', '/api/study/schedules/') + scheduleId, {credentials:'same-origin'})
+              .then(function(r){ return r.json(); })
+              .then(function(data){
+                if (data.plan) {
+                  openFullscreenModalWithData(data.plan, data.title);
+                }
+              })
+              .catch(function(){ 
+                if (window.toast) window.toast({ text: 'Could not load schedule for full screen view.', kind: 'error' }); 
+              });
+          });
+        });
+      })
+      .catch(function(err){
+        if (loading) loading.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+        if (empty) empty.classList.remove('hidden');
+        if (content) content.innerHTML = '';
+        console.error('Failed to load schedules:', err);
+        if (window.toast) window.toast({ text: 'Failed to load schedules.', kind: 'error' });
+      })
+      .finally(function () {
+        clearTimeout(t);
+      });
+  }
+
+  loadSchedules();
+
+  {% else %}
+  // ── Study schedule creation page ────────────────────────────────────────────
+
+  var DAY_NAMES   = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  var MINUTES_DAY = 1440;
+  var SNAP        = 15;
+  var dayRanges   = [[],[],[],[],[],[],[]];
+  var activeDayIndex  = 0;
+  var availEditorBuilt = false;
+
+  var VIZ_TRACK_BG =
+    'background-color:rgb(15,23,42);' +
+    'background-image:' +
+    'repeating-linear-gradient(to right,transparent 0,transparent calc(100%/24 - 2px),rgb(34,211,238) calc(100%/24 - 2px),rgb(34,211,238) calc(100%/24)),' +
+    'repeating-linear-gradient(to right,transparent 0,transparent calc(100%/96 - 1px),rgb(148,163,184) calc(100%/96 - 1px),rgb(148,163,184) calc(100%/96));';
+
+  var URLS = {
+    availability: '{{ url_for("main.api_study_availability") }}',
+    preferences:  '{{ url_for("main.api_study_preferences") }}',
+    generate:     '{{ url_for("main.api_study_generate") }}',
+    schedules:    '{{ url_for("main.api_study_schedules_list") }}',
+  };
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function parseApiBody(text, status) {
+    var j = {};
+    if (text != null && String(text).trim()) {
+      try { j = JSON.parse(text); } catch(e) { j = { message: String(text).trim().slice(0,900) }; }
+    }
+    if (!j.message) j.message = status ? 'Request failed (HTTP ' + status + ').' : 'Unknown error.';
+    return j;
+  }
+
+  function minutesFromTimeStr(t) {
+    if (!t) return 0;
+    var p = String(t).split(':');
+    var h = parseInt(p[0],10)||0, m = parseInt(p[1],10)||0;
+    return Math.min(MINUTES_DAY, Math.max(0, h*60+m));
+  }
+
+  function minutesToTimeStr(m) {
+    m = Math.max(0, Math.min(MINUTES_DAY, Math.round(m)));
+    if (m >= MINUTES_DAY) return '23:45';
+    var h = Math.floor(m/60), mm = m%60;
+    return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;
+  }
+
+  function snapMinutes(m) {
+    m = Math.round(Number(m)||0);
+    m = Math.round(m/SNAP)*SNAP;
+    return Math.max(0, Math.min(MINUTES_DAY, m));
+  }
+
+  function mergeIntervals(intervals) {
+    if (!intervals.length) return [];
+    var sorted = intervals.slice().sort(function(a,b){ return a[0]-b[0]; });
+    var out = [[sorted[0][0], sorted[0][1]]];
+    for (var i=1; i<sorted.length; i++) {
+      var cur=sorted[i], last=out[out.length-1];
+      if (cur[0]<=last[1]) last[1]=Math.max(last[1],cur[1]);
+      else out.push([cur[0],cur[1]]);
+    }
+    return out;
+  }
+
+  // ── Messages ─────────────────────────────────────────────────────────────────
+
+  function hideStudyMsg() {
+    var el = document.getElementById('study-msg');
+    if (!el) return;
+    el.style.opacity = '0'; el.style.transform = 'translateY(-10px)';
+    setTimeout(function(){ el.classList.add('hidden'); el.style.opacity=''; el.style.transform=''; }, 300);
+    clearTimeout(showMsg._t);
+  }
+
+  function showMsg(text, kind) {
+    var el = document.getElementById('study-msg');
+    var p  = document.getElementById('study-msg-text');
+    var dismiss = document.getElementById('study-msg-dismiss');
+    if (!el || !p) return;
+    p.textContent = text != null ? String(text) : '';
+    el.classList.remove('hidden','border-emerald-500/30','bg-emerald-500/10','text-emerald-200',
+      'border-red-500/30','bg-red-500/10','text-red-200',
+      'border-amber-500/30','bg-amber-500/10','text-amber-200',
+      'bg-red-950/90','border-red-500/40','text-red-100');
+    el.style.opacity='0'; el.style.transform='translateY(-10px)';
+    el.offsetHeight;
+    el.style.transition='opacity 0.3s ease, transform 0.3s ease';
+    el.style.opacity='1'; el.style.transform='translateY(0)';
+    clearTimeout(showMsg._t);
+    if (kind==='error') {
+      el.setAttribute('role','alert'); el.setAttribute('aria-live','assertive');
+      if (dismiss) dismiss.classList.remove('hidden');
+      el.classList.add('border-red-500/40','bg-red-950/90','text-red-100');
+    } else {
+      el.setAttribute('role','status'); el.setAttribute('aria-live','polite');
+      if (dismiss) dismiss.classList.add('hidden');
+      if (kind==='warn') el.classList.add('border-amber-500/30','bg-amber-500/10','text-amber-200');
+      else               el.classList.add('border-emerald-500/30','bg-emerald-500/10','text-emerald-200');
+      showMsg._t = setTimeout(hideStudyMsg, 6500);
+    }
+  }
+
+  // ── Availability editor ───────────────────────────────────────────────────────
+
+  function appendPillManualRow(startStr, endStr) {
+    ensureAvailEditor();
+    var container = document.getElementById('pill-slots');
+    if (!container) return;
+
+    var row = document.createElement('div');
+    row.className = 'manual-row flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-950 p-3 sm:flex-row sm:flex-wrap sm:items-end';
+
+    var startVal = startStr || '';
+    var endVal   = endStr   || '';
+
+    row.innerHTML =
+      '<div class="flex flex-col gap-1 flex-1 min-w-[8rem]">' +
+        '<label class="text-xs font-medium text-slate-400">Start time</label>' +
+        '<input type="time" step="900" class="manual-start time-input min-h-[44px] w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" value="' + escapeHtml(startVal) + '" />' +
+      '</div>' +
+      '<div class="flex flex-col gap-1 flex-1 min-w-[8rem]">' +
+        '<label class="text-xs font-medium text-slate-400">End time</label>' +
+        '<input type="time" step="900" class="manual-end time-input min-h-[44px] w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" value="' + escapeHtml(endVal) + '" />' +
+        '<p class="range-invalid-hint hidden">End must be after start — swap?&nbsp;<button type="button" class="btn-swap-range underline hover:no-underline">Swap</button></p>' +
+      '</div>' +
+      '<button type="button" class="manual-remove min-h-[44px] rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:border-red-500/50 hover:text-red-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400">Remove</button>';
+
+    // wire up the swap button
+    row.querySelector('.btn-swap-range').addEventListener('click', function(){
+      var sEl = row.querySelector('.manual-start');
+      var eEl = row.querySelector('.manual-end');
+      var tmp = sEl.value; sEl.value = eEl.value; eEl.value = tmp;
+      validateRow(row);
+      applyManualFormToState();
+    });
+
+    container.appendChild(row);
+
+    if (typeof gsap !== 'undefined') {
+      gsap.from(row, { autoAlpha:0, y:10, duration:0.28, ease:'power2.out' });
+    }
+  }
+
+  function validateRow(row) {
+    var sEl  = row.querySelector('.manual-start');
+    var eEl  = row.querySelector('.manual-end');
+    var hint = row.querySelector('.range-invalid-hint');
+    if (!sEl || !eEl || !hint) return;
+    var sMin = minutesFromTimeStr(sEl.value);
+    var eMin = minutesFromTimeStr(eEl.value);
+    var invalid = sEl.value && eEl.value && eMin <= sMin;
+    row.classList.toggle('range-invalid', invalid);
+    hint.classList.toggle('hidden', !invalid);
+  }
+
+  function updatePillSelectionUI() {
+    for (var d=0; d<7; d++) {
+      var b = document.getElementById('day-pill-'+d);
+      if (!b) continue;
+      var on = d===activeDayIndex;
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+      b.setAttribute('tabindex',      on ? '0' : '-1');
+    }
+    var lbl = document.getElementById('day-viz-title');
+    if (lbl) lbl.textContent = DAY_NAMES[activeDayIndex];
+    var panel = document.getElementById('pill-slots-panel');
+    if (panel) panel.setAttribute('aria-labelledby','day-pill-'+activeDayIndex);
+  }
+
+  function updatePillBusyIndicators() {
+    for (var d=0; d<7; d++) {
+      var b = document.getElementById('day-pill-'+d);
+      if (!b) continue;
+      var busy = dayRanges[d].some(function(r){ return r[1]>r[0]; });
+      b.classList.toggle('ring-2',           busy && d!==activeDayIndex);
+      b.classList.toggle('ring-cyan-500', busy && d!==activeDayIndex);
+    }
+  }
+
+  function flushActiveDayToState() {
+    if (!availEditorBuilt) return;
+    var el = document.getElementById('pill-slots');
+    if (!el) return;
+    dayRanges[activeDayIndex] = readPillDaySlots();
+  }
+
+  function selectDay(d) {
+    if (d<0||d>6) return;
+    flushActiveDayToState();
+    activeDayIndex = d;
+    updatePillSelectionUI();
+    renderSlotsForActiveDay();
+    renderDayViz();
+    updatePillBusyIndicators();
+    updateWeekFreeHint();
+  }
+
+  function readPillDaySlots() {
+    var container = document.getElementById('pill-slots');
+    if (!container) return [];
+    var ranges = [];
+    container.querySelectorAll('.manual-row').forEach(function(row){
+      var sEl = row.querySelector('.manual-start');
+      var eEl = row.querySelector('.manual-end');
+      if (!sEl || !sEl.value || !eEl || !eEl.value) return;
+      var a = snapMinutes(minutesFromTimeStr(sEl.value));
+      var b = snapMinutes(minutesFromTimeStr(eEl.value));
+      // Auto-swap silently if end ≤ start so merging works correctly
+      if (b < a) { var tmp=a; a=b; b=tmp; }
+      if (b > a) ranges.push([a,b]);
+    });
+    return mergeIntervals(ranges);
+  }
+
+  function applyManualFormToState() {
+    ensureAvailEditor();
+    // Validate all rows first
+    var container = document.getElementById('pill-slots');
+    if (container) {
+      container.querySelectorAll('.manual-row').forEach(validateRow);
+    }
+    dayRanges[activeDayIndex] = readPillDaySlots();
+    renderDayViz();
+    updatePillBusyIndicators();
+    updateWeekFreeHint();
+  }
+
+  function syncManualUIFromState() {
+    ensureAvailEditor();
+    renderSlotsForActiveDay();
+    renderDayViz();
+    updatePillBusyIndicators();
+  }
+
+  function renderSlotsForActiveDay() {
+    var container = document.getElementById('pill-slots');
+    if (!container) return;
+    container.innerHTML = '';
+    dayRanges[activeDayIndex].forEach(function(r){
+      if (r[1]<=r[0]) return;
+      appendPillManualRow(minutesToTimeStr(r[0]), minutesToTimeStr(r[1]));
+    });
+  }
+
+  function renderDayViz() {
+    var box = document.getElementById('day-viz-segments');
+    var bar = document.getElementById('day-viz-track');
+    if (!box||!bar) return;
+    box.innerHTML = '';
+    var d = activeDayIndex;
+    var summary = [];
+    dayRanges[d].forEach(function(range){
+      var lo=range[0], hi=range[1];
+      if (hi<=lo) return;
+      summary.push(minutesToTimeStr(lo)+'–'+minutesToTimeStr(hi));
+      var seg = document.createElement('div');
+      seg.className = 'pointer-events-none absolute inset-y-0 rounded-md border-2 border-cyan-200 bg-gradient-to-b from-cyan-400 to-cyan-600 shadow-md ring-1 ring-slate-950';
+      seg.style.left  = (lo/MINUTES_DAY*100)+'%';
+      seg.style.width = ((hi-lo)/MINUTES_DAY*100)+'%';
+      seg.setAttribute('role','presentation');
+      seg.title = minutesToTimeStr(lo)+' – '+minutesToTimeStr(hi);
+      if (hi-lo>=40) {
+        var lbl = document.createElement('span');
+        lbl.className = 'pointer-events-none absolute inset-x-0 bottom-1 truncate px-0.5 text-center text-[10px] font-bold text-cyan-50';
+        lbl.textContent = minutesToTimeStr(lo)+'–'+minutesToTimeStr(hi);
+        seg.appendChild(lbl);
+      }
+      box.appendChild(seg);
+    });
+    var desc = summary.length ? 'Preview: '+summary.join(', ') : 'No free time added yet for this day.';
+    bar.setAttribute('aria-label', DAY_NAMES[d]+'. '+desc);
+  }
+
+  // ── Random fill for testing ────────────────────────────────────────────────
+
+  function randomFillAvailability() {
+    var morningStart = 7*60, eveningEnd = 22*60;
+    for (var d=0; d<7; d++) {
+      var ranges = [];
+      var count = 2; // Always create exactly 2 ranges per day
+      for (var i=0; i<count; i++) {
+        // Random start between 07:00 and 19:00
+        var startSlot = Math.floor(Math.random()*((19*60-morningStart)/SNAP))*SNAP + morningStart;
+        // Random duration: 1-3 hours in 15-min steps
+        var durSlots  = Math.floor(Math.random()*((3*60)/SNAP))+4; // 4-16 slots = 1h-4h
+        var endSlot   = Math.min(eveningEnd, startSlot + durSlots*SNAP);
+        if (endSlot > startSlot) ranges.push([startSlot, endSlot]);
+      }
+      dayRanges[d] = mergeIntervals(ranges);
+    }
+    activeDayIndex = 0;
+    updatePillSelectionUI();
+    syncManualUIFromState();
+    updateWeekFreeHint();
+    window.toast({text:'Random availability filled — ' + document.getElementById('week-free-mins').textContent + ' min across the week.', kind:'success'});
+  }
+
+  // ── Availability editor build ──────────────────────────────────────────────
+
+  function buildAvailEditor() {
+    if (availEditorBuilt) return;
+    var root = document.getElementById('manual-availability-root');
+    if (!root) return;
+
+    var hours = [0,3,6,9,12,15,18,21,24];
+    var axisHtml = '<div class="relative h-8 mb-2 border-b-2 border-slate-700/90" role="presentation">';
+    hours.forEach(function(h){
+      var pct = (h/24)*100;
+      var label = h===24 ? '24h' : h+':00';
+      axisHtml += '<span class="absolute bottom-1 text-[10px] font-bold text-slate-400 tabular-nums" style="left:'+pct+'%;transform:translateX(-50%)">'+label+'</span>';
+    });
+    axisHtml += '</div>';
+
+    root.innerHTML =
+      '<div class="flex w-full flex-nowrap items-stretch overflow-x-auto border-b-0" id="day-pills" role="tablist" aria-label="Choose day"></div>' +
+      '<div id="avail-preview-card" class="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">' +
+        '<p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Day preview</p>' +
+        '<p id="day-viz-title" class="mt-1 font-display text-lg font-bold text-white"></p>' +
+        axisHtml +
+        '<div id="day-viz-track" class="relative min-h-[3.25rem] overflow-hidden rounded-lg border-2 border-slate-600 shadow-inner">' +
+          '<div class="pointer-events-none absolute inset-0 rounded-md" style="'+VIZ_TRACK_BG+'"></div>' +
+          '<div id="day-viz-segments" class="pointer-events-none absolute inset-x-1 inset-y-1"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="pill-slots-panel" class="mt-5 space-y-3" role="tabpanel" tabindex="0">' +
+        '<p class="text-xs font-semibold text-slate-400">Time windows for this day</p>' +
+        '<div id="pill-slots" class="space-y-3"></div>' +
+        '<button type="button" id="pill-add-window" class="w-full min-h-[48px] rounded-lg border border-cyan-500/35 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400">+ Add time window</button>' +
+      '</div>';
+
+    var pills = document.getElementById('day-pills');
+    for (var d=0; d<7; d++) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.id   = 'day-pill-'+d;
+      // All pills have border-b-2; only color changes — no height shift ever
+      b.className = 'day-pill flex-1 min-w-[3.5rem] min-h-[44px] px-2 py-3 text-sm font-bold text-center whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400 bg-transparent';
+      b.setAttribute('role','tab');
+      b.setAttribute('aria-selected', d===0 ? 'true' : 'false');
+      b.setAttribute('data-day', String(d));
+      b.setAttribute('tabindex', d===0 ? '0' : '-1');
+      b.textContent = DAY_NAMES[d].slice(0,3);
+      pills.appendChild(b);
+    }
+
+    root.addEventListener('click', function(ev){
+      var pill = ev.target.closest('.day-pill');
+      if (pill) {
+        var day = parseInt(pill.getAttribute('data-day'),10);
+        if (!isNaN(day)) { selectDay(day); pill.focus(); }
+        return;
+      }
+      if (ev.target.closest('#pill-add-window')) {
+        appendPillManualRow('','');
+        var slots = document.getElementById('pill-slots');
+        var lastStart = slots && slots.querySelector('.manual-row:last-child .manual-start');
+        if (lastStart) lastStart.focus();
+        applyManualFormToState();
+        return;
+      }
+      if (ev.target.closest('.manual-remove')) {
+        var row = ev.target.closest('.manual-row');
+        if (row) row.remove();
+        applyManualFormToState();
+      }
+    });
+
+    root.addEventListener('change', function(ev){
+      if (!root.contains(ev.target)) return;
+      if (ev.target.matches('.manual-start,.manual-end')) {
+        var row = ev.target.closest('.manual-row');
+        if (row) validateRow(row);
+        applyManualFormToState();
+      }
+    });
+
+    document.getElementById('day-pills').addEventListener('keydown', function(ev){
+      var t = ev.target;
+      if (!t.classList||!t.classList.contains('day-pill')) return;
+      var d = activeDayIndex;
+      if (ev.key==='ArrowRight'||ev.key==='ArrowDown') {
+        ev.preventDefault(); var nd=Math.min(6,d+1); selectDay(nd); document.getElementById('day-pill-'+nd).focus();
+      } else if (ev.key==='ArrowLeft'||ev.key==='ArrowUp') {
+        ev.preventDefault(); var nd=Math.max(0,d-1); selectDay(nd); document.getElementById('day-pill-'+nd).focus();
+      } else if (ev.key==='Home') {
+        ev.preventDefault(); selectDay(0); document.getElementById('day-pill-0').focus();
+      } else if (ev.key==='End') {
+        ev.preventDefault(); selectDay(6); document.getElementById('day-pill-6').focus();
+      }
+    });
+
+    availEditorBuilt = true;
+    activeDayIndex   = 0;
+    updatePillSelectionUI();
+
+    if (typeof gsap !== 'undefined') {
+      var previewCard = document.getElementById('avail-preview-card');
+      var slotsPanel  = document.getElementById('pill-slots-panel');
+      if (previewCard) gsap.from(previewCard, {autoAlpha:0, y:12, duration:0.35, ease:'power2.out'});
+      if (slotsPanel)  gsap.from(slotsPanel,  {autoAlpha:0, y:12, duration:0.35, delay:0.08, ease:'power2.out'});
+      // Avoid animating pills: prevents transform/opacity artifacts that can look like a right-side fade.
+    }
+  }
+
+  function ensureAvailEditor() { buildAvailEditor(); }
+
+  function updateWeekFreeHint() {
+    var total = 0;
+    for (var d=0; d<7; d++) {
+      dayRanges[d].forEach(function(r){ if (r[1]>r[0]) total+=r[1]-r[0]; });
+    }
+    document.getElementById('week-free-mins').textContent = String(total);
+  }
+
+  function collectAvailability() {
+    var out = {};
+    for (var d=0; d<7; d++) {
+      out[String(d)] = dayRanges[d].map(function(r){ return [minutesToTimeStr(r[0]), minutesToTimeStr(r[1])]; });
+    }
+    return out;
+  }
+
+  function fillAvailability(data) {
+    for (var i=0; i<7; i++) dayRanges[i] = [];
+    ensureAvailEditor();
+    var av = (data && data.availability) || {};
+    for (var d=0; d<7; d++) {
+      var slots = av[String(d)] || [];
+      var intervals = [];
+      slots.forEach(function(pair){
+        if (!pair||pair.length<2) return;
+        var a = minutesFromTimeStr(pair[0]), b = minutesFromTimeStr(pair[1]);
+        if (b < a) { var tmp=a; a=b; b=tmp; } // swap if persisted incorrectly
+        if (b>a) intervals.push([a,b]);
+      });
+      dayRanges[d] = mergeIntervals(intervals);
+    }
+    activeDayIndex = 0;
+    updatePillSelectionUI();
+    syncManualUIFromState();
+    updateWeekFreeHint();
+  }
+
+  // ── Preferences ─────────────────────────────────────────────────────────────
+
+  function applyPreferences(p) {
+    if (!p) return;
+    var wm = document.getElementById('pref-weak-mult');
+    wm.value = p.weak_subject_multiplier!=null ? p.weak_subject_multiplier : 1.75;
+    document.getElementById('pref-weak-mult-val').textContent = parseFloat(wm.value).toFixed(2);
+    document.getElementById('pref-session').value   = p.session_length_min!=null  ? p.session_length_min  : 45;
+    document.getElementById('pref-break').value     = p.break_min!=null           ? p.break_min           : 10;
+    document.getElementById('pref-max-blocks').value= p.max_blocks_per_day!=null  ? p.max_blocks_per_day  : 8;
+    var wi = Math.round((p.weekend_intensity!=null ? p.weekend_intensity : 1)*100);
+    wi = Math.max(20, Math.min(100, wi));
+    document.getElementById('pref-weekend').value = String(wi);
+    document.getElementById('pref-weekend-val').textContent = String(wi);
+    document.getElementById('pref-reserve').value  = p.reserve_weekly_minutes!=null ? p.reserve_weekly_minutes : 90;
+    document.getElementById('pref-min-sess').value = p.min_session_min!=null        ? p.min_session_min        : 20;
+  }
+
+  function readPreferencesPayload() {
+    var wi = parseInt(document.getElementById('pref-weekend').value,10)||100;
+    return {
+      weak_subject_multiplier: parseFloat(document.getElementById('pref-weak-mult').value),
+      session_length_min:      parseInt(document.getElementById('pref-session').value,10),
+      break_min:               parseInt(document.getElementById('pref-break').value,10),
+      max_blocks_per_day:      parseInt(document.getElementById('pref-max-blocks').value,10),
+      weekend_intensity:       wi/100,
+      reserve_weekly_minutes:  parseInt(document.getElementById('pref-reserve').value,10),
+      min_session_min:         parseInt(document.getElementById('pref-min-sess').value,10),
+    };
+  }
+
+  // ── Preview rendering ────────────────────────────────────────────────────────
+
+  function groupBlocksByDay(blocks) {
+    var by = {};
+    for (var i=0; i<7; i++) by[i]=[];
+    (blocks||[]).forEach(function(b){
+      var d=parseInt(b.day,10);
+      if (d>=0&&d<7) by[d].push(b);
+    });
+    for (var k=0; k<7; k++) by[k].sort(function(a,b){ return a.start_minutes-b.start_minutes; });
+    return by;
+  }
+
+  function renderPreview(plan, previewUrl, titleNote) {
+    var body    = document.getElementById('preview-body');
+    var meta    = document.getElementById('preview-meta');
+    body.innerHTML = '';
+    meta.textContent = '';
+    var m = plan.meta||{};
+    meta.textContent=(titleNote?titleNote+' · ':'')+
+      'Placed '+(m.total_placed_minutes||0)+' min study · budget '+(m.study_budget_minutes||0)+' min · '+
+      (m.free_minutes_week||0)+' min/week availability';
+    var byDay = groupBlocksByDay(plan.blocks);
+    var html = '';
+    for (var d=0; d<7; d++) {
+      var list = byDay[d];
+      if (!list.length) continue;
+      html += '<div class="rounded-lg border border-slate-800/60 overflow-hidden">';
+      html += '<div class="bg-slate-800/50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-cyan-400/90">'+DAY_NAMES[d]+'</div>';
+      html += '<table class="w-full text-left text-sm"><thead><tr class="border-b border-slate-800/60 text-[11px] text-slate-500">';
+      html += '<th class="px-3 py-2 font-medium">Time</th><th class="px-3 py-2 font-medium">Subject</th><th class="px-3 py-2 font-medium text-right">Min</th></tr></thead><tbody>';
+      list.forEach(function(b){
+        html += '<tr class="border-b border-slate-800/40 text-slate-300 last:border-0">';
+        html += '<td class="px-3 py-2 tabular-nums text-slate-400">'+escapeHtml(b.start)+' – '+escapeHtml(b.end)+'</td>';
+        html += '<td class="px-3 py-2">'+escapeHtml(b.subject);
+        if (b.intensive) html += ' <span class="text-[10px] font-semibold text-amber-400/90">priority</span>';
+        html += '</td>';
+        html += '<td class="px-3 py-2 text-right tabular-nums">'+b.minutes+'</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+    var summ = plan.by_subject_summary||[];
+    if (summ.length) {
+      html += '<div class="rounded-lg border border-slate-800/60 p-4"><h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Time by subject</h3><ul class="mt-2 space-y-1.5 text-slate-300">';
+      summ.forEach(function(row){
+        html += '<li class="flex justify-between gap-2"><span>'+escapeHtml(row.subject)+'</span><span class="tabular-nums text-slate-400">'+row.minutes+' min (~'+row.hours_rounded+' h)</span></li>';
+      });
+      html += '</ul></div>';
+    }
+    var ov = plan.overflow||[];
+    if (ov.length) {
+      html += '<div class="rounded-lg border border-amber-500/25 bg-amber-500/5 p-4 text-amber-200/90">';
+      html += '<p class="text-xs font-bold uppercase tracking-wider text-amber-400">Not fully scheduled</p>';
+      html += '<p class="mt-1 text-xs text-amber-200">Add availability, shorten sessions, or lower reserve minutes.</p><ul class="mt-2 space-y-1 text-sm">';
+      ov.forEach(function(o){ html += '<li>'+escapeHtml(o.subject)+': <span class="tabular-nums">'+o.minutes_not_scheduled+'</span> min left</li>'; });
+      html += '</ul></div>';
+    }
+    body.innerHTML = html||'<p class="text-slate-500">No blocks placed — check availability and subject data.</p>';
+  }
+
+  function hidePreview() {
+    var section = document.getElementById('preview-section');
+    section.style.opacity='0'; section.style.transform='translateY(20px)';
+    setTimeout(function(){
+      section.classList.add('hidden'); section.style.opacity=''; section.style.transform='';
+      document.getElementById('preview-placeholder').classList.remove('hidden');
+    }, 300);
+  }
+
+  // ── Saved list ──────────────────────────────────────────────────────────────
+
+  function renderSavedList(schedules) {
+    var ul    = document.getElementById('saved-list');
+    var empty = document.getElementById('saved-empty');
+    ul.innerHTML = '';
+    if (!schedules||!schedules.length) { empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    schedules.forEach(function(s){
+      var li = document.createElement('li');
+      li.className = 'flex flex-col gap-2 rounded-lg border border-slate-800/60 bg-slate-900/30 px-3 py-3 sm:flex-row sm:items-center sm:justify-between';
+      li.innerHTML =
+        '<div><p class="font-medium text-slate-200">'+escapeHtml(s.title||'Plan')+'</p>'+
+        '<p class="text-xs text-slate-500">'+escapeHtml(s.created_at||'')+'</p></div>'+
+        '<div class="flex flex-wrap gap-2">'+
+        '<button type="button" class="btn-preview-saved rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-cyan-500/40 hover:text-cyan-300" data-id="'+s.id+'">Preview</button>'+
+        '<button type="button" class="btn-del-saved rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:border-red-500/40 hover:text-red-400" data-id="'+s.id+'">Delete</button>'+
+        '</div>';
+      li.querySelector('.btn-preview-saved').addEventListener('click', function(){
+        window.location.href = '{{ url_for("main.study") }}';
+      });
+      li.querySelector('.btn-del-saved').addEventListener('click', function(){
+        if (!confirm('Delete this saved schedule?')) return;
+        fetch(s.preview_url, {method:'DELETE',credentials:'same-origin'})
+          .then(function(r){ if (!r.ok) throw new Error(); return loadSavedSchedules(); })
+          .then(function(){ window.toast({text:'Deleted.', kind:'success'}); })
+          .catch(function(){ window.toast({text:'Delete failed.', kind:'error'}); });
+      });
+      ul.appendChild(li);
+    });
+  }
+
+  function loadSavedSchedules() {
+    console.log('Loading saved schedules...');
+    var loading = document.getElementById('saved-schedules-loading');
+    var content = document.getElementById('saved-schedules-content');
+    var empty   = document.getElementById('saved-empty');
+
+    // Show loading state
+    if (loading) loading.classList.remove('hidden');
+    if (content) content.classList.add('hidden');
+    if (empty) empty.classList.add('hidden');
+
+    // Never allow an infinite spinner: abort after 12s and always flip UI.
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var t = setTimeout(function () { try { if (ctrl) ctrl.abort(); } catch (e) {} }, 12000);
+
+    console.log('Fetching schedules from:', URLS.schedules);
+    fetch(URLS.schedules, { method: 'GET', credentials: 'same-origin', signal: ctrl ? ctrl.signal : undefined })
+      .then(function(res){
+        console.log('Response status:', res.status);
+        return res.text().then(function(text){
+          console.log('Response text:', text);
+          var j = {};
+          try { j = text && text.trim() ? JSON.parse(text) : {}; } catch(e) { 
+            console.error('JSON parse error:', e);
+            j = { message: text || '' }; 
+          }
+          return { ok: res.ok, status: res.status, j: j };
+        });
+      })
+      .then(function(x){
+        if (loading) loading.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+        if (!x.ok) {
+          if (empty) empty.classList.remove('hidden');
+          if (content) content.innerHTML = '';
+          if (window.toast) {
+            window.toast({ text: (x.j && x.j.message) ? x.j.message : ('Could not load schedules (HTTP ' + x.status + ').'), kind: 'error' });
+          }
+          return;
+        }
+
+        var data = x.j || {};
+        var schedules = data.schedules || [];
+        if (!schedules.length) {
+          if (empty) empty.classList.remove('hidden');
+          if (content) content.innerHTML = '';
+          return;
+        }
+
+        if (empty) empty.classList.add('hidden');
+        if (content) {
+          content.innerHTML = schedules.map(function(schedule){
+            var created = new Date(schedule.created_at);
+            var formattedDate = created.toLocaleDateString() + ' at ' + created.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+            return '<div class="rounded-xl border border-slate-800 bg-[#0F172A] p-5 sm:p-6">' +
+              '<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">' +
+                '<div>' +
+                  '<h3 class="font-display text-lg font-bold text-white">' + escapeHtml(schedule.title) + '</h3>' +
+                  '<p class="mt-1 text-xs text-slate-500">Created ' + formattedDate + '</p>' +
+                '</div>' +
+                '<div class="flex gap-2">' +
+                  '<a href="' + schedule.preview_url + '" class="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-cyan-500 bg-cyan-500 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-600">' +
+                    '<i class="fa-solid fa-eye" aria-hidden="true"></i> View' +
+                  '</a>' +
+                  '<button type="button" class="btn-fullscreen-schedule inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 hover:border-cyan-500 hover:bg-slate-700" data-id="' + schedule.id + '">' +
+                    '<i class="fa-solid fa-expand" aria-hidden="true"></i> Full Screen' +
+                  '</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('');
+        }
+        
+        // Add event listeners for full screen buttons
+        content.querySelectorAll('.btn-fullscreen-schedule').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var scheduleId = this.getAttribute('data-id');
+            fetch(schedule.preview_url.replace('/api/study/schedules/', '/api/study/schedules/') + scheduleId, {credentials:'same-origin'})
+              .then(function(r){ return r.json(); })
+              .then(function(data){
+                if (data.plan) {
+                  openFullscreenModalWithData(data.plan, data.title);
+                }
+              })
+              .catch(function(){ 
+                if (window.toast) window.toast({ text: 'Could not load schedule for full screen view.', kind: 'error' }); 
+              });
+          });
+        });
+      })
+      .catch(function(err){
+        if (loading) loading.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+        if (empty) empty.classList.remove('hidden');
+        if (content) content.innerHTML = '';
+        console.error('Failed to load schedules:', err);
+        if (window.toast) window.toast({ text: 'Failed to load schedules.', kind: 'error' });
+      })
+      .finally(function () {
+        clearTimeout(t);
+      });
+  }
+
+  // ── Event wiring ─────────────────────────────────────────────────────────────
+
+  document.getElementById('pref-weak-mult').addEventListener('input', function(){
+    document.getElementById('pref-weak-mult-val').textContent = parseFloat(this.value).toFixed(2);
+  });
+  document.getElementById('pref-weekend').addEventListener('input', function(){
+    document.getElementById('pref-weekend-val').textContent = this.value;
+  });
+  document.getElementById('study-msg-dismiss').addEventListener('click', hideStudyMsg);
+
+  document.getElementById('btn-random-availability').addEventListener('click', randomFillAvailability);
+
+  document.getElementById('btn-save-availability').addEventListener('click', function(){
+    applyManualFormToState();
+    var body = {availability: collectAvailability()};
+    fetch(URLS.availability, {method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){ return r.text().then(function(text){ return {ok:r.ok,status:r.status,j:parseApiBody(text,r.status)}; }); })
+      .then(function(x){
+        if (!x.ok) { window.toast({text:x.j.message||'Could not save availability.', kind:'error'}); return; }
+        window.toast({text:'Availability saved.', kind:'success'});
+      })
+      .catch(function(err){ window.toast({text:'Could not save availability: '+(err&&err.message?err.message:String(err)), kind:'error'}); });
+  });
+
+  document.getElementById('prefs-form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var body = readPreferencesPayload();
+    fetch(URLS.preferences, {method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){ return r.text().then(function(text){ return {ok:r.ok,status:r.status,j:parseApiBody(text,r.status)}; }); })
+      .then(function(x){
+        if (!x.ok) { window.toast({text:x.j.message||'Could not save preferences.', kind:'error'}); return; }
+        window.toast({text:'Preferences saved.', kind:'success'});
+      })
+      .catch(function(err){ window.toast({text:'Could not save preferences: '+(err&&err.message?err.message:String(err)), kind:'error'}); });
+  });
+
+  document.getElementById('btn-generate').addEventListener('click', function(){
+    applyManualFormToState();
+    var titleEl = document.getElementById('plan-title');
+    var title = (titleEl.value||'').trim();
+    if (!title) {
+      titleEl.setAttribute('aria-invalid','true'); titleEl.focus();
+      window.toast({text:'Enter a plan name before building your schedule.', kind:'error'}); return;
+    }
+    titleEl.removeAttribute('aria-invalid');
+    var prefs = readPreferencesPayload();
+    prefs.title = title;
+    prefs.availability = collectAvailability();
+    fetch(URLS.generate, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(prefs)})
+      .then(function(r){ return r.text().then(function(text){ return {ok:r.ok,status:r.status,j:parseApiBody(text,r.status),raw:text}; }); })
+      .then(function(x){
+        if (!x.ok) {
+          var errParts=[x.j.message||'Could not generate schedule.'];
+          if (x.j.error_type) errParts.push('['+x.j.error_type+']');
+          window.toast({text:errParts.join('\n'), kind:'error'}); return;
+        }
+        if (x.j.plan) {
+          window.toast({text:'Schedule generated and saved.', kind:'success'});
+          loadSavedSchedules();
+        } else {
+          window.toast({text:'Server returned success but no plan data. Raw: '+String(x.raw||'').slice(0,400), kind:'error'});
+        }
+      })
+      .catch(function(err){ window.toast({text:'Network or browser error: '+(err&&err.message?err.message:String(err)), kind:'error'}); });
+  });
+
+  // ── Full Screen Modal ────────────────────────────────────────────────────────────────
+
+  function openFullscreenModal() {
+    var modal = document.getElementById('fullscreen-modal');
+    var content = document.getElementById('fullscreen-content');
+    var previewBody = document.getElementById('preview-body');
+    
+    if (!modal || !content || !previewBody) return;
+    
+    // Copy preview content to modal
+    content.innerHTML = previewBody.innerHTML;
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    
+    // Focus close button for accessibility
+    var closeBtn = document.getElementById('close-fullscreen-btn');
+    if (closeBtn) closeBtn.focus();
+  }
+  
+  function openFullscreenModalWithData(plan, title) {
+    var modal = document.getElementById('fullscreen-modal');
+    var content = document.getElementById('fullscreen-content');
+    
+    if (!modal || !content) return;
+    
+    // Generate HTML from plan data
+    var byDay = groupBlocksByDay(plan.blocks);
+    var html = '';
+    for (var d = 0; d < 7; d++) {
+      var list = byDay[d];
+      if (!list.length) continue;
+      html += '<div class="rounded-lg border border-slate-800 overflow-hidden mb-4">';
+      html += '<div class="bg-slate-800 px-3 py-2 text-xs font-bold uppercase tracking-wider text-cyan-400">' + DAY_NAMES[d] + '</div>';
+      html += '<table class="w-full text-left text-sm"><thead><tr class="border-b border-slate-800 text-[11px] text-slate-500">';
+      html += '<th class="px-3 py-2 font-medium">Time</th><th class="px-3 py-2 font-medium">Subject</th><th class="px-3 py-2 font-medium text-right">Min</th></tr></thead><tbody>';
+      list.forEach(function(b){
+        html += '<tr class="border-b border-slate-800/50 hover:bg-slate-800/30">';
+        html += '<td class="px-3 py-2">'+b.start+' - '+b.end+'</td>';
+        html += '<td class="px-3 py-2">'+escapeHtml(b.subject)+'</td>';
+        html += '<td class="px-3 py-2 text-right">'+b.minutes+'</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+    
+    content.innerHTML = html;
+    
+    // Update modal title
+    var titleEl = modal.querySelector('h2');
+    if (titleEl) titleEl.textContent = title + ' - Full Screen';
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    
+    // Focus close button for accessibility
+    var closeBtn = document.getElementById('close-fullscreen-btn');
+    if (closeBtn) closeBtn.focus();
+  }
+  
+  function closeFullscreenModal() {
+    var modal = document.getElementById('fullscreen-modal');
+    if (!modal) return;
+    
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  
+  // Event listeners
+  var fullscreenBtn = document.getElementById('fullscreen-preview-btn');
+  var closeBtn = document.getElementById('close-fullscreen-btn');
+  
+  if (fullscreenBtn) {
+    fullscreenBtn.addEventListener('click', openFullscreenModal);
+  }
+  
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeFullscreenModal);
+  }
+  
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var modal = document.getElementById('fullscreen-modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        closeFullscreenModal();
+      }
+    }
+  });
+
+  // ── Boot ──────────────────────────────────────────────────────────────────────
+
+  fillAvailability({availability:{}});
+
+  if (typeof gsap !== 'undefined') {
+    requestAnimationFrame(function(){
+      var h        = document.querySelector('.max-w-6xl > header');
+      var availSec = document.getElementById('avail-heading') ? document.getElementById('avail-heading').closest('section') : null;
+      var grid     = document.querySelector('.max-w-6xl > .grid');
+      var savedSec = document.getElementById('saved-heading') ? document.getElementById('saved-heading').closest('section') : null;
+      var els = [h,availSec,grid,savedSec].filter(Boolean);
+      if (els.length) gsap.from(els,{autoAlpha:0, y:16, duration:0.4, stagger:0.07, ease:'power2.out'});
+    });
+  }
+
+  Promise.all([
+    fetch(URLS.availability,{credentials:'same-origin'}).then(function(r){ return r.json(); }),
+    fetch(URLS.preferences, {credentials:'same-origin'}).then(function(r){ return r.json(); }),
+    loadSavedSchedules(),
+  ])
+    .then(function(results){
+      fillAvailability(results[0]);
+      applyPreferences((results[1]&&results[1].preferences)||{});
+    })
+    .catch(function(){ window.toast({text:'Could not load planner data.', kind:'error'}); });
+
+})();
+</script>
+  {% endif %}
+{% endblock %}

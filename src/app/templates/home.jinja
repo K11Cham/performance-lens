@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PerformanceLens — Setup</title>
+
+    <script src="{{ url_for('static', filename='vendor/tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="{{ url_for('static', filename='vendor/gsap.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fonts.css') }}">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            background: #0B1120;
+            color: #94A3B8;
+        }
+
+        .font-display { font-family: 'Space Grotesk', sans-serif; }
+
+        :focus { outline: none; }
+        :focus-visible { outline: 2px solid #38BDF8; outline-offset: 2px; }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+        input:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible {
+            outline: none;
+        }
+
+        .onb-field {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid rgb(148, 163, 184);
+            background: rgb(15, 23, 42);
+            color: #f1f5f9;
+            padding: 14px 16px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        }
+
+        .onb-field::placeholder { color: #475569; }
+
+        .onb-field:hover { border-color: rgb(148, 163, 184); }
+
+        .onb-field:focus {
+            border-color: rgb(56, 189, 248);
+            background: rgb(15, 23, 42);
+        }
+
+        .onb-field:focus:not(:focus-visible) {
+            box-shadow: none;
+        }
+
+        .onb-field:focus-visible {
+            border-color: #38BDF8;
+            box-shadow: 0 0 0 3px rgb(56, 189, 248);
+        }
+
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        .onb-step {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 20px 32px;
+            overflow-y: auto;
+            z-index: 0;
+        }
+
+        .onb-step.is-active {
+            z-index: 2;
+        }
+
+        #onb-step-4 { align-items: stretch; }
+
+        .onb-card {
+            width: 100%;
+            max-width: 28rem;
+            border-radius: 16px;
+            border: 1px solid rgb(51, 65, 85);
+            background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
+            box-shadow: 0 24px 80px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
+            padding: 28px 24px 26px;
+        }
+
+        @media (min-width: 640px) {
+            .onb-card { padding: 32px 32px 28px; }
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 48px;
+            padding: 0 24px;
+            border: none;
+            border-radius: 10px;
+            background: #38BDF8;
+            color: #0B1120;
+            font-weight: 700;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: transform 0.12s, background 0.2s;
+        }
+
+        .btn-primary:hover { background: #7DD3FC; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled,
+        .btn-primary.disabled { opacity: 0.45; pointer-events: none; }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 44px;
+            padding: 0 16px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: #64748B;
+            font-weight: 600;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .btn-ghost:hover { color: #cbd5e1; background: rgb(148, 163, 184); }
+
+        .pin-wrap {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            padding: 12px 0;
+            cursor: pointer;
+        }
+
+        .pin-dot {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid rgb(148, 163, 184);
+            background: transparent;
+            transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+            flex-shrink: 0;
+        }
+
+        .pin-dot.filled {
+            background: #38BDF8;
+            border-color: #38BDF8;
+            box-shadow: 0 0 14px rgb(56, 189, 248);
+        }
+
+        .pin-dot.error {
+            border-color: #F87171;
+            background: rgb(248, 113, 113);
+        }
+
+        .pin-hidden {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .onb-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #64748B;
+            margin-bottom: 10px;
+        }
+
+        .progress-track {
+            height: 3px;
+            border-radius: 999px;
+            background: rgb(148, 163, 184);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #22d3ee, #38BDF8);
+            width: 0%;
+            transform-origin: left center;
+        }
+
+        :root { --zone-h: 176px; }
+
+        .s5-zone-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        @media (min-width: 1024px) {
+            .s5-zone-row { grid-template-columns: 1fr 1fr; }
+        }
+
+        .dz-box {
+            height: var(--zone-h);
+            position: relative;
+            border: 2px dashed rgb(51, 65, 85);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .dz-box:hover,
+        .dz-box.drag-over {
+            border-color: rgb(56, 189, 248);
+            background: rgb(56, 189, 248);
+        }
+
+        .dz-corner {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            pointer-events: none;
+        }
+
+        .dz-corner.tl {
+            top: -1px;
+            left: -1px;
+            border-top: 2px solid rgb(56, 189, 248);
+            border-left: 2px solid rgb(56, 189, 248);
+            border-radius: 14px 0 0 0;
+        }
+
+        .dz-corner.br {
+            bottom: -1px;
+            right: -1px;
+            border-bottom: 2px solid rgb(56, 189, 248);
+            border-right: 2px solid rgb(56, 189, 248);
+            border-radius: 0 0 14px 0;
+        }
+
+        .s5-table-card {
+            height: var(--zone-h);
+            overflow: hidden;
+            position: relative;
+            background: rgb(11, 17, 32);
+            border: 1px solid rgb(51, 65, 85);
+            border-radius: 14px;
+        }
+
+        .s5-table-card.has-data::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: linear-gradient(to bottom, transparent, #0f172a 90%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .s5-preview-link {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            padding: 4px 2px;
+            border: none;
+            background: none;
+            color: #38BDF8;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .s5-preview-link:hover { color: #7DD3FC; }
+
+        .modal-root {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        .modal-root.is-open {
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        .modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgb(0, 0, 0);
+            opacity: 0;
+        }
+
+        .modal-sheet {
+            position: relative;
+            width: 100%;
+            max-width: 28rem;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 14px;
+            border: 1px solid rgb(51, 65, 85);
+            background: #0f172a;
+            padding: 22px;
+            opacity: 0;
+            transform: scale(0.94) translateY(16px);
+        }
+
+        .err-msg {
+            display: none;
+            color: #F87171;
+            font-size: 12px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .check-bubble {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgb(16, 185, 129);
+            border: 2px solid #10B981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen antialiased">
+
+    <div id="onb-root" class="relative flex min-h-screen flex-col overflow-hidden">
+
+        <!-- Ambient orbs (GSAP floats) — below UI, never intercept clicks -->
+        <div class="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+            <div class="onb-orb onb-orb-a absolute -left-20 top-1/4 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl"></div>
+            <div class="onb-orb onb-orb-b absolute -right-16 bottom-1/4 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl"></div>
+            <div class="onb-orb onb-orb-c absolute left-1/2 top-10 h-48 w-48 -translate-x-1/2 rounded-full bg-indigo-500/10 blur-2xl"></div>
+        </div>
+
+        <div id="onb-content-layer" class="relative z-20 flex min-h-0 min-h-screen flex-1 flex-col">
+
+        <header id="onb-topbar" class="relative z-10 px-5 pb-2 pt-5 sm:px-8" style="opacity:0;visibility:hidden;">
+            <div class="mx-auto flex max-w-2xl flex-col gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-400 shadow-lg shadow-cyan-500/15">
+                        <i class="fa-solid fa-chart-line text-sm text-[#0B1120]" aria-hidden="true"></i>
+                    </div>
+                    <span class="font-display text-sm font-bold tracking-tight text-slate-200">PerformanceLens</span>
+                    <span class="ml-auto text-[11px] font-semibold uppercase tracking-wider text-slate-600">Setup</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="progress-track flex-1">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <span id="stepLabel" class="font-display shrink-0 text-[11px] text-slate-500">1 / 4</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="relative z-10 flex flex-1 flex-col min-h-0">
+            <div id="stepsMount" class="relative flex-1 min-h-0">
+                <!-- Step 0: Hero -->
+                <div class="onb-step is-active" id="onb-step-0">
+                    <div class="onb-card text-center">
+                        <div id="onb-hero-badge" class="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-400/10">
+                            <i class="fa-solid fa-bolt text-2xl text-cyan-400" aria-hidden="true"></i>
+                        </div>
+                        <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-cyan-400/90">Welcome</p>
+                        <h1 id="onb-hero-title" class="font-display text-3xl font-bold leading-tight text-white sm:text-4xl">
+                            Your performance,<br><span class="text-cyan-400">in focus</span>
+                        </h1>
+                        <p id="onb-hero-lead" class="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
+                            A private workspace for your terms, subjects, and trends—starting with a quick setup.
+                        </p>
+                        <button type="button" id="onb-hero-cta" class="btn-primary mt-10 w-full sm:w-auto sm:min-w-[200px]" onclick="goToStep(1)">
+                            Begin setup <i class="fa-solid fa-arrow-right text-xs" aria-hidden="true"></i>
+                        </button>
+                        <p class="onb-hero-foot mt-8 text-xs text-slate-600">Takes about a minute · Works offline-first</p>
+                    </div>
+                </div>
+
+                <!-- Step 1: Name -->
+                <div class="onb-step" id="onb-step-1">
+                    <div class="onb-card">
+                        <p class="mb-1 text-xs font-bold uppercase tracking-wider text-cyan-400/80">Step 1</p>
+                        <h2 class="font-display text-xl font-bold text-white sm:text-2xl">What should we call you?</h2>
+                        <p class="mt-2 text-sm text-slate-500">This appears on your dashboard and sidebar.</p>
+                        <form class="mt-8" onsubmit="return handleName(event)">
+                            <label class="onb-label" for="fullName">Display name</label>
+                            <input type="text" id="fullName" class="onb-field" placeholder="e.g. Sam Rivera" required autocomplete="name">
+                            <div class="mt-8 flex gap-3">
+                                <button type="button" class="btn-ghost" onclick="goToStep(0)"><i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i> Back</button>
+                                <button type="submit" class="btn-primary flex-1">Continue</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Step 2: PIN create -->
+                <div class="onb-step" id="onb-step-2">
+                    <div class="onb-card">
+                        <p class="mb-1 text-xs font-bold uppercase tracking-wider text-cyan-400/80">Step 2</p>
+                        <h2 class="font-display text-xl font-bold text-white sm:text-2xl">Create a 4-digit PIN</h2>
+                        <p class="mt-2 text-sm text-slate-500">You’ll use this when you return to this device.</p>
+                        <label class="onb-label mt-8 text-center">PIN</label>
+                        <div class="pin-wrap relative" onclick="document.getElementById('pinInput1').focus()">
+                            <div class="pin-dot" id="dot1-1"></div>
+                            <div class="pin-dot" id="dot1-2"></div>
+                            <div class="pin-dot" id="dot1-3"></div>
+                            <div class="pin-dot" id="dot1-4"></div>
+                            <input type="password" maxlength="4" inputmode="numeric" autocomplete="new-password" class="pin-hidden" id="pinInput1" oninput="handlePinInput(this,1)" aria-label="Create PIN">
+                        </div>
+                        <div class="mt-8 flex gap-3">
+                            <button type="button" class="btn-ghost" onclick="goToStep(1)"><i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i> Back</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: PIN confirm -->
+                <div class="onb-step" id="onb-step-3">
+                    <div class="onb-card">
+                        <p class="mb-1 text-xs font-bold uppercase tracking-wider text-cyan-400/80">Step 3</p>
+                        <h2 class="font-display text-xl font-bold text-white sm:text-2xl">Confirm your PIN</h2>
+                        <p class="mt-2 text-sm text-slate-500">Enter the same code again.</p>
+                        <label class="onb-label mt-8 text-center">Confirm PIN</label>
+                        <div class="pin-wrap relative" onclick="document.getElementById('pinInput2').focus()">
+                            <div class="pin-dot" id="dot2-1"></div>
+                            <div class="pin-dot" id="dot2-2"></div>
+                            <div class="pin-dot" id="dot2-3"></div>
+                            <div class="pin-dot" id="dot2-4"></div>
+                            <input type="password" maxlength="4" inputmode="numeric" autocomplete="new-password" class="pin-hidden" id="pinInput2" oninput="handlePinInput(this,2)" aria-label="Confirm PIN">
+                        </div>
+                        <p class="err-msg" id="pinError"><i class="fa-solid fa-circle-exclamation mr-1" aria-hidden="true"></i>PINs don’t match</p>
+                        <div class="mt-8 flex gap-3">
+                            <button type="button" class="btn-ghost" onclick="goToStep(2)"><i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i> Back</button>
+                            <button type="button" class="btn-primary flex-1" onclick="validatePins()">Confirm</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Upload -->
+                <div class="onb-step" id="onb-step-4">
+                    <div class="mx-auto flex w-full max-w-4xl flex-col px-1 pb-6 sm:px-2">
+                        <div class="onb-card max-w-none">
+                            <p class="mb-1 text-xs font-bold uppercase tracking-wider text-cyan-400/80">Step 4</p>
+                            <h2 class="font-display text-xl font-bold text-white sm:text-2xl">Almost there, <span id="previewName" class="text-cyan-400">friend</span>.</h2>
+                            <p class="mt-2 text-sm text-slate-500">Upload your first report card, or skip and add results later.</p>
+
+                            <div class="s5-zone-row mt-8">
+                                <div class="dz-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                                    <div class="dz-corner tl"></div>
+                                    <div class="dz-corner br"></div>
+                                    <input type="file" id="fileInput" class="pin-hidden" accept=".pdf,.docx,.xlsx,.xls,.csv" onchange="handleFileSelect(event)" aria-label="Upload report file">
+                                    <div id="upload-placeholder">
+                                        <i class="fa-solid fa-file-import mb-3 block text-3xl text-slate-600" aria-hidden="true"></i>
+                                        <p class="text-sm text-slate-300">Drop a file here or tap to browse</p>
+                                        <p class="mt-1 text-xs text-slate-600">PDF · Word · Excel · CSV</p>
+                                    </div>
+                                    <div id="upload-loading" class="hidden">
+                                        <i class="fa-solid fa-spinner fa-spin mb-3 block text-3xl text-cyan-400" aria-hidden="true"></i>
+                                        <p class="text-sm text-slate-400">Reading your document…</p>
+                                    </div>
+                                </div>
+
+                                <div id="review-container" class="hidden flex flex-col">
+                                    <div class="s5-table-card" id="review-table-card">
+                                        <table class="w-full border-collapse text-[13px]">
+                                            <thead>
+                                                <tr class="border-b border-slate-800/80 bg-[#0f172a]">
+                                                    <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">Subject</th>
+                                                    <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500">Score</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="review-tbody"></tbody>
+                                        </table>
+                                    </div>
+                                    <button type="button" class="s5-preview-link" id="previewLinkBtn" onclick="openPreviewModal()">
+                                        View all <span id="previewCount">0</span> rows <i class="fa-solid fa-arrow-right text-[10px]" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 space-y-4">
+                                <div id="termNameWrapper" class="hidden space-y-4">
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <label class="onb-label" for="onboardingSchoolYear">School year</label>
+                                            <input type="text" id="onboardingSchoolYear" class="onb-field" placeholder="e.g. 2024-2025" autocomplete="off">
+                                        </div>
+                                        <div>
+                                            <label class="onb-label" for="onboardingTermLabel">Term</label>
+                                            <input type="text" id="onboardingTermLabel" class="onb-field" placeholder="e.g. Term 1, First Term" required>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="onb-label" for="onboardingTermName">Label on dashboard (optional)</label>
+                                        <input type="text" id="onboardingTermName" class="onb-field" placeholder="Leave blank to combine year + term">
+                                    </div>
+                                </div>
+                                <div id="onboarding-error" class="mt-4 hidden items-start gap-3 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-3">
+                                    <i class="fa-solid fa-circle-exclamation mt-0.5 text-red-400" aria-hidden="true"></i>
+                                    <span id="onboarding-error-text" class="text-sm text-red-300"></span>
+                                </div>
+                            </div>
+
+                            <div class="mt-10 flex flex-wrap items-center gap-3 border-t border-slate-800/60 pt-6">
+                                <button type="button" class="btn-ghost" onclick="goToStep(3)"><i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i> Back</button>
+                                <span class="flex-1"></span>
+                                <button type="button" class="btn-ghost" onclick="finishSetup(false)">Skip</button>
+                                <button type="button" class="btn-primary disabled px-5" id="finishBtn" onclick="finishSetup(true)">
+                                    Save &amp; continue <i class="fa-solid fa-check text-xs" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="doneState" class="onb-card mt-6 hidden max-w-lg mx-auto text-center">
+                            <div class="check-bubble mb-6">
+                                <i class="fa-solid fa-check text-2xl text-emerald-400" aria-hidden="true"></i>
+                            </div>
+                            <h2 class="font-display text-xl font-bold text-white">You’re all set</h2>
+                            <p class="mt-2 text-sm text-slate-500">Head to your dashboard whenever you’re ready.</p>
+                            <button type="button" class="btn-primary mt-8" onclick="goToDashboard()">
+                                Open dashboard <i class="fa-solid fa-arrow-right text-xs" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        </div><!-- #onb-content-layer -->
+
+    </div>
+
+    <div id="previewModal" class="modal-root" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle" aria-hidden="true">
+        <div class="modal-backdrop" onclick="closePreviewModal()"></div>
+        <div class="modal-sheet">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <h3 id="previewModalTitle" class="font-display text-lg font-bold text-white">All results</h3>
+                <button type="button" class="btn-ghost min-h-0 px-2 py-2 text-lg text-slate-500" onclick="closePreviewModal()" aria-label="Close">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div id="previewModalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const FLOW_STEPS = 4;
+        let currentStep = 0;
+        let formData = { name: '', pin: '' };
+        let parsedData = [];
+        let modalOpen = false;
+
+        function scoreColor(s) {
+            if (s >= 80) return '#10B981';
+            if (s >= 70) return '#38BDF8';
+            if (s >= 60) return '#FBBF24';
+            if (s >= 50) return '#FB923C';
+            return '#F87171';
+        }
+
+        function updateTopBar(step) {
+            const bar = document.getElementById('onb-topbar');
+            const fill = document.getElementById('progressFill');
+            const label = document.getElementById('stepLabel');
+            if (step === 0) {
+                gsap.to(fill, { width: '0%', duration: 0.25, ease: 'power2.inOut' });
+                gsap.to(bar, { autoAlpha: 0, duration: 0.2, ease: 'power2.in', onComplete: () => {
+                    bar.style.visibility = 'hidden';
+                }});
+            } else {
+                bar.style.visibility = 'visible';
+                gsap.to(bar, { autoAlpha: 1, duration: 0.35, ease: 'power2.out' });
+                const pct = (step / FLOW_STEPS) * 100;
+                gsap.to(fill, { width: pct + '%', duration: 0.45, ease: 'power3.out' });
+                label.textContent = step + ' / ' + FLOW_STEPS;
+            }
+        }
+
+        function goToStep(next) {
+            if (next === currentStep) return;
+            const curr = document.getElementById('onb-step-' + currentStep);
+            const incoming = document.getElementById('onb-step-' + next);
+            if (!curr || !incoming) return;
+
+            const forward = next > currentStep;
+            const xLeave = forward ? -36 : 36;
+            const xEnter = forward ? 36 : -36;
+
+            curr.style.pointerEvents = 'none';
+            incoming.style.zIndex = '3';
+            incoming.style.visibility = 'visible';
+            incoming.style.pointerEvents = 'auto';
+            curr.classList.remove('is-active');
+            incoming.classList.add('is-active');
+
+            const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } });
+            tl.to(curr, { autoAlpha: 0, x: xLeave, duration: 0.24, ease: 'power2.in' })
+                .set(curr, { x: 0 })
+                .fromTo(incoming,
+                    { autoAlpha: 0, x: xEnter },
+                    {
+                        autoAlpha: 1,
+                        x: 0,
+                        duration: 0.36,
+                        ease: 'power3.out',
+                        onComplete: () => {
+                            curr.style.zIndex = '0';
+                            incoming.style.zIndex = '2';
+                            currentStep = next;
+                            updateTopBar(next);
+                            if (next === 2) gsap.delayedCall(0.08, () => document.getElementById('pinInput1').focus());
+                            if (next === 3) gsap.delayedCall(0.08, () => document.getElementById('pinInput2').focus());
+                            if (next === 4 && formData.name) {
+                                const first = formData.name.trim().split(/\s+/)[0] || 'friend';
+                                document.getElementById('previewName').textContent = first;
+                            }
+                        },
+                    }
+                );
+        }
+
+        function initHero() {
+            const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+            tl.from('#onb-hero-badge', { scale: 0.82, autoAlpha: 0, duration: 0.5, ease: 'back.out(1.5)' })
+                .from('#onb-hero-title', { y: 28, autoAlpha: 0, duration: 0.55 }, '-=0.28')
+                .from('#onb-hero-lead', { y: 18, autoAlpha: 0, duration: 0.4 }, '-=0.32')
+                .from('#onb-hero-cta', { y: 16, autoAlpha: 0, duration: 0.4, ease: 'power2.out' }, '-=0.26')
+                .from('.onb-hero-foot', { autoAlpha: 0, duration: 0.35 }, '-=0.22');
+            return tl;
+        }
+
+        function initOrbs() {
+            gsap.to('.onb-orb-a', { x: 18, y: -14, duration: 9, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+            gsap.to('.onb-orb-b', { x: -22, y: 12, duration: 11, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+            gsap.to('.onb-orb-c', { scale: 1.12, opacity: 0.85, duration: 6, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            gsap.set('#onb-content-layer', { autoAlpha: 0, y: 36 });
+
+            document.querySelectorAll('.onb-step').forEach((el, i) => {
+                const on = i === 0;
+                gsap.set(el, { autoAlpha: on ? 1 : 0, x: 0 });
+                el.style.visibility = on ? 'visible' : 'hidden';
+                el.style.pointerEvents = on ? 'auto' : 'none';
+                el.style.zIndex = on ? '2' : '0';
+                el.classList.toggle('is-active', on);
+            });
+
+            const intro = gsap.timeline();
+            intro.to('#onb-content-layer', {
+                autoAlpha: 1,
+                y: 0,
+                duration: 0.8,
+                ease: 'power3.out',
+            }, 0);
+            intro.add(initHero(), 0.12);
+
+            gsap.from('.onb-orb', {
+                autoAlpha: 0,
+                scale: 0.92,
+                duration: 1.1,
+                stagger: 0.12,
+                ease: 'power2.out',
+                delay: 0.05,
+            });
+
+            initOrbs();
+        });
+
+        function handleName(e) {
+            e.preventDefault();
+            const v = document.getElementById('fullName').value.trim();
+            if (v) {
+                formData.name = v;
+                goToStep(2);
+            }
+            return false;
+        }
+
+        function handlePinInput(input, setNum) {
+            input.value = input.value.replace(/[^0-9]/g, '');
+            const val = input.value;
+            for (let i = 1; i <= 4; i++) {
+                const d = document.getElementById('dot' + setNum + '-' + i);
+                d.classList.toggle('filled', i <= val.length);
+                d.classList.remove('error');
+            }
+            if (setNum === 1 && val.length === 4) {
+                gsap.delayedCall(0.2, () => goToStep(3));
+            }
+        }
+
+        function validatePins() {
+            const p1 = document.getElementById('pinInput1').value;
+            const p2 = document.getElementById('pinInput2').value;
+            const err = document.getElementById('pinError');
+            if (p1.length === 4 && p1 === p2) {
+                err.style.display = 'none';
+                formData.pin = p1;
+                goToStep(4);
+            } else {
+                err.style.display = 'block';
+                gsap.fromTo(err, { x: 0 }, { x: 6, duration: 0.08, repeat: 5, yoyo: true, ease: 'power1.inOut' });
+                for (let i = 1; i <= 4; i++) {
+                    const d = document.getElementById('dot2-' + i);
+                    d.classList.remove('filled');
+                    d.classList.add('error');
+                }
+                gsap.delayedCall(0.55, () => {
+                    document.getElementById('pinInput2').value = '';
+                    for (let i = 1; i <= 4; i++) document.getElementById('dot2-' + i).classList.remove('error');
+                    document.getElementById('pinInput2').focus();
+                });
+            }
+        }
+
+        const dz = document.getElementById('dropZone');
+        ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
+        ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag-over'); }));
+        dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]); });
+
+        function handleFileSelect(e) {
+            if (e.target.files[0]) uploadFile(e.target.files[0]);
+        }
+
+        async function uploadFile(file) {
+            hideError();
+            document.getElementById('upload-placeholder').classList.add('hidden');
+            document.getElementById('upload-loading').classList.remove('hidden');
+            document.getElementById('review-container').classList.add('hidden');
+            document.getElementById('termNameWrapper').classList.add('hidden');
+
+            const fd = new FormData();
+            fd.append('file', file);
+
+            try {
+                const res = await fetch("{{ url_for('main.api_results_upload') }}?raw=true", { method: 'POST', body: fd });
+                const data = await res.json();
+
+                document.getElementById('upload-loading').classList.add('hidden');
+                document.getElementById('upload-placeholder').classList.remove('hidden');
+
+                if (data.status === 'error') {
+                    showError(data.message || 'Failed to parse file.');
+                    return;
+                }
+
+                parsedData = data.data;
+                if (data.school_year != null) document.getElementById('onboardingSchoolYear').value = data.school_year || '';
+                if (data.term_label != null) document.getElementById('onboardingTermLabel').value = data.term_label || '';
+                var disp = data.term_display || data.term_detected || '';
+                if (disp) document.getElementById('onboardingTermName').value = disp;
+                document.getElementById('termNameWrapper').classList.remove('hidden');
+
+                const tbody = document.getElementById('review-tbody');
+                tbody.innerHTML = '';
+                parsedData.forEach((item, idx) => {
+                    const c = scoreColor(item.score);
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-slate-800/60';
+                    tr.innerHTML =
+                        '<td class="px-4 py-2.5 text-slate-200">' +
+                        '<span class="mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle" style="background:' + c + '"></span>' +
+                        item.subject + '</td>' +
+                        '<td class="px-4 py-2.5 text-right font-semibold tabular-nums" style="color:' + c + '">' +
+                        '<input type="number" value="' + item.score + '" min="0" max="100" data-index="' + idx + '" class="onboard-score onb-field max-w-[4.5rem] border-0 bg-transparent px-1 py-0.5 text-right text-inherit shadow-none focus:ring-0" />' +
+                        '</td>';
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('review-table-card').classList.add('has-data');
+                document.getElementById('previewCount').textContent = parsedData.length;
+                document.getElementById('previewLinkBtn').style.display = 'inline-flex';
+                document.getElementById('review-container').classList.remove('hidden');
+                gsap.from('#review-container', { autoAlpha: 0, y: 10, duration: 0.35, ease: 'power2.out' });
+
+                document.getElementById('finishBtn').classList.remove('disabled');
+            } catch (err) {
+                document.getElementById('upload-loading').classList.add('hidden');
+                document.getElementById('upload-placeholder').classList.remove('hidden');
+                showError('Network error or server failed to process the file.');
+            }
+        }
+
+        function buildModalTable(data) {
+            let html = '<table class="w-full border-collapse text-[13px]"><thead><tr class="border-b border-slate-800/80">' +
+                '<th class="py-2 pr-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">Subject</th>' +
+                '<th class="py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500">Score</th></tr></thead><tbody>';
+            data.forEach((item, i) => {
+                const c = scoreColor(item.score);
+                html += '<tr class="' + (i < data.length - 1 ? 'border-b border-slate-800/50' : '') + '">' +
+                    '<td class="py-2.5 pr-2 text-slate-200"><span class="mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle" style="background:' + c + '"></span>' + item.subject + '</td>' +
+                    '<td class="py-2.5 text-right font-semibold" style="color:' + c + '">' + item.score + '</td></tr>';
+            });
+            return html + '</tbody></table>';
+        }
+
+        function openPreviewModal() {
+            const data = [];
+            document.querySelectorAll('.onboard-score').forEach(inp => {
+                const idx = parseInt(inp.dataset.index, 10);
+                data.push({ subject: parsedData[idx].subject, score: parseFloat(inp.value) || 0 });
+            });
+            document.getElementById('previewModalBody').innerHTML = buildModalTable(data);
+            const root = document.getElementById('previewModal');
+            const bd = root.querySelector('.modal-backdrop');
+            const sheet = root.querySelector('.modal-sheet');
+            root.classList.add('is-open');
+            root.setAttribute('aria-hidden', 'false');
+            modalOpen = true;
+            gsap.fromTo(bd, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 });
+            gsap.fromTo(sheet, { autoAlpha: 0, y: 22, scale: 0.95 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.4, ease: 'power3.out' });
+        }
+
+        function closePreviewModal() {
+            if (!modalOpen) return;
+            const root = document.getElementById('previewModal');
+            const bd = root.querySelector('.modal-backdrop');
+            const sheet = root.querySelector('.modal-sheet');
+            gsap.to(sheet, { autoAlpha: 0, y: 16, scale: 0.96, duration: 0.22, ease: 'power2.in' });
+            gsap.to(bd, {
+                autoAlpha: 0,
+                duration: 0.2,
+                delay: 0.05,
+                onComplete: () => {
+                    root.classList.remove('is-open');
+                    root.setAttribute('aria-hidden', 'true');
+                    modalOpen = false;
+                },
+            });
+        }
+
+        async function finishSetup(includeData) {
+            if (includeData && parsedData.length === 0) return;
+
+            if (includeData) {
+                document.querySelectorAll('.onboard-score').forEach(inp => {
+                    parsedData[inp.dataset.index].score = parseFloat(inp.value) || 0;
+                });
+            }
+
+            const card = document.querySelector('#onb-step-4 .onb-card');
+            const done = document.getElementById('doneState');
+
+            gsap.to(card, {
+                autoAlpha: 0,
+                y: -12,
+                duration: 0.28,
+                ease: 'power2.in',
+                onComplete: () => {
+                    card.classList.add('hidden');
+                    done.classList.remove('hidden');
+                    gsap.fromTo(done, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power3.out' });
+                    gsap.from('.check-bubble', { scale: 0, rotation: -25, duration: 0.65, ease: 'back.out(1.6)', delay: 0.05 });
+                },
+            });
+
+            const payload = { name: formData.name, pin: formData.pin };
+            if (includeData) {
+                payload.school_year = document.getElementById('onboardingSchoolYear').value.trim();
+                payload.term_label = document.getElementById('onboardingTermLabel').value.trim() || 'First Term';
+                var obDisp = document.getElementById('onboardingTermName').value.trim();
+                if (obDisp) payload.term_name = obDisp;
+                payload.results = parsedData;
+            }
+            try {
+                await fetch("{{ url_for('main.api_onboarding_complete') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+            } catch (err) {
+                console.error('Onboarding save failed:', err);
+            }
+        }
+
+        function goToDashboard() {
+            window.location.href = "{{ url_for('main.dashboard') }}";
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('onboarding-error');
+            document.getElementById('onboarding-error-text').textContent = msg;
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+
+        function hideError() {
+            const el = document.getElementById('onboarding-error');
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        }
+    </script>
+</body>
+</html>

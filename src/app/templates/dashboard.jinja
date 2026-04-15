@@ -1,0 +1,376 @@
+{% extends "base.jinja" %}
+
+{% block title %}Dashboard — PerformanceLens{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div id="dash-loading" class="flex items-center justify-center py-32">
+  <div class="text-center">
+    <i class="fa-solid fa-spinner fa-spin text-2xl text-cyan-400 mb-3 block" aria-hidden="true"></i>
+    <p class="text-sm text-slate-400">Loading your data...</p>
+  </div>
+</div>
+
+<div id="dash-content" class="hidden max-w-4xl space-y-8 fade-in">
+
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-800 bg-[#0F172A] px-4 py-4 sm:px-6">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-cyan-400/90">Dashboard</p>
+      <h2 class="font-display mt-1 text-xl font-bold text-white sm:text-2xl">Hi, {{ user_display_name }}</h2>
+      <p class="mt-1 text-sm text-slate-500">Quick snapshot of how you’re doing. Dig into charts and every term on <a href="{{ url_for('main.analysis') }}" class="text-cyan-400 hover:text-cyan-300 underline-offset-2 hover:underline">Analysis</a>.</p>
+    </div>
+    <div class="flex shrink-0 flex-col gap-2 sm:items-end">
+      <a href="{{ url_for('main.input') }}" class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-cyan-400 px-5 py-3 text-sm font-bold text-[#0B1120] transition hover:bg-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">
+        <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+        Add results
+      </a>
+      <a href="{{ url_for('main.analysis') }}" class="text-center text-xs font-semibold text-slate-500 transition hover:text-cyan-400 sm:text-right">
+        Open analysis <i class="fa-solid fa-arrow-right ml-1 text-[10px]" aria-hidden="true"></i>
+      </a>
+    </div>
+  </div>
+
+  <div id="stat-cards" class="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 stagger-fade-in"></div>
+
+  <section class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6 fade-in-up" aria-labelledby="trend-heading">
+    <div class="mb-1 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h2 id="trend-heading" class="font-display text-lg font-bold text-white">Performance over time</h2>
+        <p class="text-sm text-slate-500">Average score per term · axis zooms to your range</p>
+      </div>
+      <p id="trend-scale-hint" class="hidden text-xs text-slate-600"></p>
+    </div>
+    <div id="trend-chart" class="mt-4 min-h-[260px] sm:min-h-[320px] lg:min-h-[360px]"></div>
+  </section>
+</div>
+
+<div id="dash-empty" class="hidden">
+  <div class="flex items-center justify-center py-24 sm:py-32">
+    <div class="max-w-md px-4 text-center">
+      <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-400/10">
+        <i class="fa-solid fa-chart-line text-2xl text-cyan-400" aria-hidden="true"></i>
+      </div>
+      <h3 class="font-display text-xl font-bold text-white">No results yet</h3>
+      <p class="mt-2 text-sm text-slate-400">Upload a report card or enter scores to see your snapshot here.</p>
+      <a href="{{ url_for('main.input') }}" class="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-lg bg-cyan-400 px-8 py-3 text-sm font-bold text-[#0B1120] transition hover:bg-cyan-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">
+        Manage results
+      </a>
+    </div>
+  </div>
+</div>
+
+<div id="dash-error" class="hidden">
+  <div class="flex items-center justify-center py-24 sm:py-32 px-4">
+    <div class="inline-flex max-w-lg items-start gap-3 rounded-lg border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-300">
+      <i class="fa-solid fa-circle-exclamation mt-0.5 shrink-0" aria-hidden="true"></i>
+      <span>Failed to load dashboard data. Please refresh the page.</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  var URLS = {
+    summary: '{{ url_for("main.api_dashboard_summary") }}',
+    trend:   '{{ url_for("main.api_dashboard_trend") }}',
+    scheme:  '{{ url_for("main.api_marking_scheme_get") }}'
+  };
+
+  var GRADE_COLORS = {
+    'A': '#10B981', 'B': '#38BDF8', 'C+': '#7DD3FC', 'C-': '#FBBF24', 'D': '#FB923C', 'F': '#F87171'
+  };
+
+  var scheme = [];
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function resolveGrade(score) {
+    for (var i = 0; i < scheme.length; i++) {
+      if (score >= scheme[i].min) return scheme[i].grade;
+    }
+    return scheme.length ? scheme[scheme.length - 1].grade : '?';
+  }
+
+  function gradeColor(grade) {
+    return GRADE_COLORS[grade] || '#64748B';
+  }
+
+  function gradeBadge(grade) {
+    var c = gradeColor(grade);
+    return '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold" style="background:' + c + '22;color:' + c + ';">' + escapeHtml(grade) + '</span>';
+  }
+
+  function ringSVG(pct, color) {
+    var size = 48, sw = 4, r = (size - sw) / 2;
+    var circ = 2 * Math.PI * r;
+    var offset = circ - (Math.min(Math.max(pct, 0), 100) / 100) * circ;
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" style="transform:rotate(-90deg)" class="flex-shrink-0" aria-hidden="true">' +
+      '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + r + '" fill="none" stroke="#1E293B" stroke-width="' + sw + '"/>' +
+      '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="' + sw + '"' +
+      ' stroke-dasharray="' + circ + '" stroke-dashoffset="' + offset + '" stroke-linecap="round"/></svg>';
+  }
+
+  function statCard(label, iconClass, innerHtml) {
+    return '<div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-4 sm:p-5">' +
+      '<div class="mb-2 flex items-start justify-between gap-2">' +
+      '<span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">' + escapeHtml(label) + '</span>' +
+      '<i class="' + iconClass + ' text-slate-600 text-sm" aria-hidden="true"></i></div>' + innerHtml + '</div>';
+  }
+
+  function renderStatCards(s) {
+    var el = document.getElementById('stat-cards');
+    var avg = s.overall_average != null ? Number(s.overall_average) : null;
+    var avgGrade = avg != null ? resolveGrade(avg) : '?';
+    var avgClr = gradeColor(avgGrade);
+    var overallInner = avg != null
+      ? '<div class="flex items-center gap-3">' + ringSVG(avg, avgClr) +
+        '<div><span class="font-display text-2xl font-bold text-white">' + avg.toFixed(1) + '%</span>' +
+        '<p class="text-xs text-slate-500 mt-0.5">Grade ' + gradeBadge(avgGrade) + '</p></div></div>'
+      : '<p class="text-sm text-slate-500">No data</p>';
+
+    el.innerHTML =
+      statCard('Overall average', 'fa-solid fa-chart-line', overallInner) +
+      statCard('Terms', 'fa-solid fa-layer-group',
+        '<div class="font-display text-2xl font-bold text-white">' + (s.terms_count || 0) + '</div>' +
+        '<p class="mt-1 text-xs text-slate-500">Recorded terms</p>') +
+      statCard('Subjects', 'fa-solid fa-book-open',
+        '<div class="font-display text-2xl font-bold text-white">' + (s.subjects_count || 0) + '</div>' +
+        '<p class="mt-1 text-xs text-slate-500">Unique subjects</p>');
+  }
+
+  function computeYRange(values) {
+    if (!values || values.length === 0) return { yMin: 0, yMax: 100 };
+    var minV = Math.min.apply(null, values);
+    var maxV = Math.max.apply(null, values);
+    if (minV === maxV) {
+      minV = Math.max(0, minV - 6);
+      maxV = Math.min(100, maxV + 6);
+    }
+    var span = maxV - minV;
+    var pad = Math.max(3, span * 0.14);
+    var yMin = Math.max(0, minV - pad);
+    var yMax = Math.min(100, maxV + pad);
+    if (yMax - yMin < 12) {
+      var c = (yMin + yMax) / 2;
+      yMin = Math.max(0, c - 7);
+      yMax = Math.min(100, c + 7);
+    }
+    return { yMin: Math.round(yMin * 10) / 10, yMax: Math.round(yMax * 10) / 10 };
+  }
+
+  function niceYTicks(yMin, yMax, maxTicks) {
+    var span = yMax - yMin;
+    if (span <= 0) return [yMin, yMax];
+    var rough = span / Math.max(2, maxTicks - 1);
+    var pow10 = Math.pow(10, Math.floor(Math.log(rough) / Math.LN10));
+    var err = rough / pow10;
+    var step = err < 1.5 ? pow10 : err < 3 ? 2 * pow10 : err < 7 ? 5 * pow10 : 10 * pow10;
+    var start = Math.ceil(yMin / step - 1e-9) * step;
+    var ticks = [];
+    for (var t = start; t <= yMax + step * 0.001; t += step) {
+      ticks.push(Math.round(t * 10) / 10);
+    }
+    if (ticks.length < 2) ticks = [yMin, yMax];
+    return ticks;
+  }
+
+  function yToPixel(v, yMin, yMax, pb, plotH) {
+    return pb - ((v - yMin) / (yMax - yMin)) * plotH;
+  }
+
+  function renderTrend(data) {
+    var container = document.getElementById('trend-chart');
+    var hint = document.getElementById('trend-scale-hint');
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p class="text-sm text-slate-500">Add term results to see performance over time.</p>';
+      hint.classList.add('hidden');
+      return;
+    }
+
+    var avgs = data.map(function (d) { return d.average; });
+    var yr = computeYRange(avgs);
+    var yMin = yr.yMin;
+    var yMax = yr.yMax;
+    if (yMin > 0.5 || yMax < 99.5) {
+      hint.textContent = 'Y-axis: ' + yMin + '–' + yMax + '% (magnified)';
+      hint.classList.remove('hidden');
+    } else {
+      hint.classList.add('hidden');
+    }
+
+    var NS = 'http://www.w3.org/2000/svg';
+    var W = 920, H = 400;
+    var pl = 72, pr = 896, pt = 32, pb = 312;
+    var plotW = pr - pl, plotH = pb - pt;
+
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('class', 'w-full h-auto max-h-[400px]');
+    svg.style.overflow = 'visible';
+
+    var defs = document.createElementNS(NS, 'defs');
+    var grad = document.createElementNS(NS, 'linearGradient');
+    grad.setAttribute('id', 'dashTrendGrad');
+    grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0');
+    grad.setAttribute('x2', '0'); grad.setAttribute('y2', '1');
+    var stop1 = document.createElementNS(NS, 'stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', '#38BDF8');
+    stop1.setAttribute('stop-opacity', '0.35');
+    var stop2 = document.createElementNS(NS, 'stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', '#38BDF8');
+    stop2.setAttribute('stop-opacity', '0.02');
+    grad.appendChild(stop1); grad.appendChild(stop2); defs.appendChild(grad); svg.appendChild(defs);
+
+    var ticks = niceYTicks(yMin, yMax, 6);
+    ticks.forEach(function (v) {
+      var gy = yToPixel(v, yMin, yMax, pb, plotH);
+      var gline = document.createElementNS(NS, 'line');
+      gline.setAttribute('x1', pl); gline.setAttribute('y1', gy);
+      gline.setAttribute('x2', pr); gline.setAttribute('y2', gy);
+      gline.setAttribute('stroke', '#1E293B');
+      gline.setAttribute('stroke-width', '1');
+      svg.appendChild(gline);
+      var glabel = document.createElementNS(NS, 'text');
+      glabel.setAttribute('x', pl - 10);
+      glabel.setAttribute('y', gy + 5);
+      glabel.setAttribute('text-anchor', 'end');
+      glabel.setAttribute('fill', '#94A3B8');
+      glabel.setAttribute('font-size', '16');
+      glabel.setAttribute('font-weight', '600');
+      glabel.setAttribute('font-family', 'Plus Jakarta Sans, sans-serif');
+      glabel.textContent = v % 1 === 0 ? String(Math.round(v)) : v.toFixed(1);
+      svg.appendChild(glabel);
+    });
+
+    var pts = data.map(function (d, i) {
+      var x = data.length === 1 ? (pl + pr) / 2 : pl + (i / (data.length - 1)) * plotW;
+      var y = yToPixel(d.average, yMin, yMax, pb, plotH);
+      return { x: x, y: y, term: d.term_name, avg: d.average };
+    });
+
+    var baseY = yToPixel(yMin, yMin, yMax, pb, plotH);
+
+    if (pts.length === 1) {
+      var dot = document.createElementNS(NS, 'circle');
+      dot.setAttribute('cx', pts[0].x);
+      dot.setAttribute('cy', pts[0].y);
+      dot.setAttribute('r', '6');
+      dot.setAttribute('fill', '#38BDF8');
+      dot.setAttribute('stroke', '#0F172A');
+      dot.setAttribute('stroke-width', '2');
+      svg.appendChild(dot);
+    } else {
+      var areaD = 'M ' + pts[0].x + ' ' + baseY;
+      for (var a = 0; a < pts.length; a++) areaD += ' L ' + pts[a].x + ' ' + pts[a].y;
+      areaD += ' L ' + pts[pts.length - 1].x + ' ' + baseY + ' Z';
+      var areaPath = document.createElementNS(NS, 'path');
+      areaPath.setAttribute('d', areaD);
+      areaPath.setAttribute('fill', 'url(#dashTrendGrad)');
+      svg.appendChild(areaPath);
+
+      var lineD = 'M ' + pts[0].x + ' ' + pts[0].y;
+      for (var l = 1; l < pts.length; l++) lineD += ' L ' + pts[l].x + ' ' + pts[l].y;
+      var linePath = document.createElementNS(NS, 'path');
+      linePath.setAttribute('d', lineD);
+      linePath.setAttribute('fill', 'none');
+      linePath.setAttribute('stroke', '#38BDF8');
+      linePath.setAttribute('stroke-width', '2.5');
+      linePath.setAttribute('stroke-linejoin', 'round');
+      linePath.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(linePath);
+
+      for (var d = 0; d < pts.length; d++) {
+        var c = document.createElementNS(NS, 'circle');
+        c.setAttribute('cx', pts[d].x);
+        c.setAttribute('cy', pts[d].y);
+        c.setAttribute('r', '5');
+        c.setAttribute('fill', '#38BDF8');
+        c.setAttribute('stroke', '#0F172A');
+        c.setAttribute('stroke-width', '2');
+        svg.appendChild(c);
+      }
+    }
+
+    var rotate = pts.length > 4;
+    for (var t = 0; t < pts.length; t++) {
+      var displayName = pts[t].term.length > 14 ? pts[t].term.substring(0, 13) + '\u2026' : pts[t].term;
+      var xLabel = document.createElementNS(NS, 'text');
+      xLabel.textContent = displayName;
+      xLabel.setAttribute('x', pts[t].x);
+      xLabel.setAttribute('y', pb + 28);
+      xLabel.setAttribute('text-anchor', 'middle');
+      xLabel.setAttribute('fill', '#94A3B8');
+      xLabel.setAttribute('font-size', '14');
+      xLabel.setAttribute('font-weight', '600');
+      xLabel.setAttribute('font-family', 'Plus Jakarta Sans, sans-serif');
+      if (rotate) xLabel.setAttribute('transform', 'rotate(-35 ' + pts[t].x + ' ' + (pb + 28) + ')');
+      svg.appendChild(xLabel);
+    }
+
+    container.innerHTML = '';
+    container.appendChild(svg);
+  }
+
+  function hideAll() {
+    document.getElementById('dash-loading').classList.add('hidden');
+    document.getElementById('dash-content').classList.add('hidden');
+    document.getElementById('dash-empty').classList.add('hidden');
+    document.getElementById('dash-error').classList.add('hidden');
+  }
+
+  function showError() {
+    hideAll();
+    document.getElementById('dash-error').classList.remove('hidden');
+  }
+
+  function showEmpty() {
+    hideAll();
+    document.getElementById('dash-empty').classList.remove('hidden');
+  }
+
+  function showContent() {
+    hideAll();
+    document.getElementById('dash-content').classList.remove('hidden');
+    if (typeof gsap !== 'undefined') {
+      gsap.from('#dash-content > *', { autoAlpha: 0, y: 14, duration: 0.38, stagger: 0.09, ease: 'power2.out' });
+    }
+  }
+
+  async function safeFetch(url) {
+    var res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  document.addEventListener('DOMContentLoaded', async function () {
+    try {
+      var summary = await safeFetch(URLS.summary);
+      var trend = await safeFetch(URLS.trend);
+      var schemeData = await safeFetch(URLS.scheme);
+      scheme = schemeData.scheme || [];
+
+      if (!summary.subjects_count || summary.subjects_count === 0) {
+        showEmpty();
+        return;
+      }
+
+      renderStatCards(summary);
+      renderTrend(trend.trend);
+      showContent();
+    } catch (err) {
+      showError();
+    }
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,600 @@
+{% extends "base.jinja" %}
+
+{% block title %}Analysis — PerformanceLens{% endblock %}
+
+{% block page_title %}Analysis{% endblock %}
+
+{% block main_classes %}p-4 sm:p-6 md:p-8 lg:px-10 xl:px-12 2xl:px-14{% endblock %}
+
+{% block content %}
+<div id="anal-loading" class="flex items-center justify-center py-32">
+  <div class="text-center">
+    <i class="fa-solid fa-spinner fa-spin text-2xl text-cyan-400 mb-3 block" aria-hidden="true"></i>
+    <p class="text-sm text-slate-400">Building charts…</p>
+  </div>
+</div>
+
+<div id="anal-content" class="hidden w-full max-w-[1600px] mx-auto space-y-6 lg:space-y-8">
+
+  <header class="anal-section lg:flex lg:items-end lg:justify-between lg:gap-8">
+    <div class="max-w-3xl">
+      <p class="text-xs font-semibold uppercase tracking-wider text-cyan-400/90">Analysis</p>
+      <h2 class="font-display mt-1 text-2xl font-bold text-white sm:text-3xl">Deep dive into your results</h2>
+      <p class="mt-2 text-sm text-slate-500">Charts update from every term and subject you’ve saved. Add more data from <a href="{{ url_for('main.input') }}" class="text-cyan-400 hover:underline">Manage results</a>.</p>
+    </div>
+  </header>
+
+  {# Wide bento: main chart column + sticky side rail #}
+  <section class="anal-section xl:grid xl:grid-cols-12 xl:items-start xl:gap-6 2xl:gap-8">
+    <div class="space-y-6 xl:col-span-8 2xl:col-span-8">
+      <div class="grid gap-6 md:grid-cols-2">
+        <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6">
+          <h3 class="font-display text-base font-bold text-white">Average over terms</h3>
+          <p class="text-xs text-slate-500">Zoomed Y-axis when scores cluster</p>
+          <div class="relative mt-4 h-64 sm:h-72 lg:h-80">
+            <canvas id="chart-trend" aria-label="Average score by term"></canvas>
+          </div>
+        </div>
+        <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6">
+          <h3 class="font-display text-base font-bold text-white">Term averages</h3>
+          <p class="text-xs text-slate-500">Compare each term side by side</p>
+          <div class="relative mt-4 h-64 sm:h-72 lg:h-80">
+            <canvas id="chart-terms-bar" aria-label="Bar chart of term averages"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6">
+        <h3 class="font-display text-base font-bold text-white">Subject trajectories</h3>
+        <p class="text-xs text-slate-500">Up to 8 subjects with the most term entries</p>
+        <div class="relative mt-4 h-72 sm:h-80 xl:h-96 2xl:h-[28rem]">
+          <canvas id="chart-multi-line" aria-label="Scores over terms by subject"></canvas>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6">
+        <h3 class="font-display text-base font-bold text-white">Subject strength (lifetime average)</h3>
+        <p class="text-xs text-slate-500">Horizontal bars ranked by average — wider layout on large screens</p>
+        <div class="relative mt-4 h-[min(22rem,50vh)] min-h-[180px] md:h-[min(26rem,45vh)] xl:h-[min(32rem,40vh)]">
+          <canvas id="chart-subjects-h" aria-label="Subject averages"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <aside class="mt-6 space-y-6 xl:col-span-4 2xl:col-span-4 xl:mt-0 xl:sticky xl:top-24 xl:self-start">
+      <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6">
+        <h3 class="font-display text-base font-bold text-white">Grade mix</h3>
+        <p class="text-xs text-slate-500">Marking scheme distribution</p>
+        <div class="relative mx-auto mt-4 aspect-square max-h-[320px] w-full max-w-[320px]">
+          <canvas id="chart-grades" aria-label="Grade distribution"></canvas>
+        </div>
+      </div>
+      <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6">
+        <h3 class="font-display text-base font-bold text-white">Score spread</h3>
+        <p class="text-xs text-slate-500">Histogram (10-point bins)</p>
+        <div class="relative mt-4 h-64 sm:h-72">
+          <canvas id="chart-histogram" aria-label="Score histogram"></canvas>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  {# Bottom: terms + raw breakdown side by side on xl #}
+  <section class="anal-section grid gap-6 xl:grid-cols-2 xl:gap-8 2xl:grid-cols-5 2xl:gap-8">
+    <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6 2xl:col-span-2" aria-labelledby="terms-heading">
+      <h3 id="terms-heading" class="font-display text-lg font-bold text-white">Terms &amp; detail</h3>
+      <p class="text-sm text-slate-500">Pick a term for the full score sheet</p>
+      <div id="term-cards" class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-2" role="tablist" aria-label="Terms"></div>
+      <div id="term-detail" class="mt-6 rounded-lg border border-slate-800 bg-[#0B1120] p-4 sm:p-5" role="tabpanel" aria-live="polite">
+        <div class="mb-4 flex flex-col gap-3 border-b border-slate-800/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h4 class="font-display text-base font-semibold text-white sm:text-lg" id="term-detail-title">—</h4>
+            <p class="mt-1 text-sm text-slate-500" id="term-detail-meta"></p>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs sm:text-sm" id="term-detail-badges"></div>
+        </div>
+        <div id="term-detail-body" class="overflow-x-auto"></div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6 xl:min-h-0 2xl:col-span-3" aria-labelledby="subjects-heading">
+      <h3 id="subjects-heading" class="font-display text-lg font-bold text-white">Subject breakdown</h3>
+      <p class="text-sm text-slate-500">Lifetime average and each term’s score</p>
+      <div id="subject-bars" class="mt-4 max-h-[min(70vh,52rem)] overflow-y-auto pr-1 xl:max-h-[min(75vh,56rem)] 2xl:max-h-none 2xl:overflow-visible"></div>
+    </div>
+  </section>
+</div>
+
+<div id="anal-empty" class="hidden py-24 text-center sm:py-32">
+  <div class="mx-auto max-w-md px-4">
+    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-400/10">
+      <i class="fa-solid fa-magnifying-glass-chart text-2xl text-cyan-400" aria-hidden="true"></i>
+    </div>
+    <h3 class="font-display text-xl font-bold text-white">Nothing to analyze yet</h3>
+    <p class="mt-2 text-sm text-slate-400">Save at least one term of results to unlock charts.</p>
+    <a href="{{ url_for('main.input') }}" class="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-lg bg-cyan-400 px-8 py-3 text-sm font-bold text-[#0B1120] hover:bg-cyan-300">Add results</a>
+  </div>
+</div>
+
+<div id="anal-error" class="hidden py-24 px-4 text-center">
+  <p class="inline-flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+    <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+    Could not load analysis. Refresh and try again.
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script>
+(function () {
+  'use strict';
+
+  var URLS = {
+    summary:  '{{ url_for("main.api_dashboard_summary") }}',
+    trend:    '{{ url_for("main.api_dashboard_trend") }}',
+    subjects: '{{ url_for("main.api_dashboard_subjects") }}',
+    terms:    '{{ url_for("main.api_dashboard_terms") }}',
+    scheme:   '{{ url_for("main.api_marking_scheme_get") }}'
+  };
+
+  var GRADE_COLORS = {
+    'A': '#10B981', 'B': '#38BDF8', 'C+': '#7DD3FC', 'C-': '#FBBF24', 'D': '#FB923C', 'F': '#F87171'
+  };
+
+  var LINE_COLORS = ['#38BDF8', '#a78bfa', '#f472b6', '#fbbf24', '#34d399', '#fb923c', '#60a5fa', '#c084fc'];
+
+  var scheme = [];
+  var allTerms = [];
+  var selectedTermIndex = 0;
+  var charts = [];
+
+  function destroyCharts() {
+    charts.forEach(function (c) { try { c.destroy(); } catch (e) {} });
+    charts = [];
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function resolveGrade(score) {
+    for (var i = 0; i < scheme.length; i++) {
+      if (score >= scheme[i].min) return scheme[i].grade;
+    }
+    return scheme.length ? scheme[scheme.length - 1].grade : '?';
+  }
+
+  function gradeColor(grade) {
+    return GRADE_COLORS[grade] || '#64748B';
+  }
+
+  function gradeBadge(grade) {
+    var c = gradeColor(grade);
+    return '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold" style="background:' + c + '22;color:' + c + ';">' + escapeHtml(grade) + '</span>';
+  }
+
+  function computeYRange(values) {
+    if (!values || values.length === 0) return { yMin: 0, yMax: 100 };
+    var minV = Math.min.apply(null, values);
+    var maxV = Math.max.apply(null, values);
+    if (minV === maxV) {
+      minV = Math.max(0, minV - 6);
+      maxV = Math.min(100, maxV + 6);
+    }
+    var span = maxV - minV;
+    var pad = Math.max(3, span * 0.14);
+    var yMin = Math.max(0, minV - pad);
+    var yMax = Math.min(100, maxV + pad);
+    if (yMax - yMin < 12) {
+      var c = (yMin + yMax) / 2;
+      yMin = Math.max(0, c - 7);
+      yMax = Math.min(100, c + 7);
+    }
+    return { yMin: Math.round(yMin * 10) / 10, yMax: Math.round(yMax * 10) / 10 };
+  }
+
+  function flattenScores(subjects) {
+    var out = [];
+    subjects.forEach(function (s) {
+      (s.scores_by_term || []).forEach(function (x) {
+        out.push(Number(x.score));
+      });
+    });
+    return out;
+  }
+
+  function buildHistogramCounts(scores) {
+    var bins = [];
+    var i;
+    for (i = 0; i < 10; i++) bins.push(0);
+    scores.forEach(function (s) {
+      var b = Math.min(9, Math.floor(s / 10));
+      bins[b]++;
+    });
+    var labels = [];
+    for (i = 0; i < 10; i++) labels.push(i * 10 + '–' + (i === 9 ? '100' : String(i * 10 + 9)));
+    return { labels: labels, data: bins };
+  }
+
+  var CHART_TICK_FONT = { size: 15, family: "'Plus Jakarta Sans', sans-serif", weight: '600' };
+  var CHART_LEGEND_FONT = { size: 14, family: "'Plus Jakarta Sans', sans-serif", weight: '500' };
+
+  function chartCommonOptions() {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#cbd5e1', font: CHART_LEGEND_FONT, padding: 14 } },
+        tooltip: { titleFont: { size: 14, weight: '600' }, bodyFont: { size: 14 } },
+      },
+      scales: {
+        x: {
+          ticks: { color: '#94a3b8', font: CHART_TICK_FONT, maxRotation: 45, minRotation: 0 },
+          grid: { color: 'rgb(51,65,85)' },
+        },
+        y: {
+          ticks: { color: '#94a3b8', font: CHART_TICK_FONT },
+          grid: { color: 'rgb(51,65,85)' },
+        },
+      },
+    };
+  }
+
+  function renderCharts(trend, subjectsPayload) {
+    destroyCharts();
+    var trendData = trend.trend || [];
+    var subjects = subjectsPayload.subjects || [];
+
+    if (typeof Chart !== 'undefined') {
+      Chart.defaults.color = '#cbd5e1';
+      Chart.defaults.borderColor = 'rgb(51,65,85)';
+      Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+      Chart.defaults.font.size = 15;
+      Chart.defaults.font.weight = '500';
+    }
+
+    var termKeys = trendData.map(function (d) { return d.period_key != null ? d.period_key : d.term_name; });
+    var termLabels = trendData.map(function (d) { return d.term_name; });
+    var termAvgs = trendData.map(function (d) { return d.average; });
+
+    if (termLabels.length && document.getElementById('chart-trend')) {
+      var yr = computeYRange(termAvgs);
+      var c1 = new Chart(document.getElementById('chart-trend'), {
+        type: 'line',
+        data: {
+          labels: termLabels,
+          datasets: [{
+            label: 'Average %',
+            data: termAvgs,
+            borderColor: '#38BDF8',
+            backgroundColor: 'rgb(56,189,248)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointBackgroundColor: '#38BDF8',
+            pointBorderColor: '#0f172a',
+            pointBorderWidth: 2
+          }]
+        },
+        options: Object.assign({}, chartCommonOptions(), {
+          scales: {
+            y: Object.assign({}, chartCommonOptions().scales.y, { min: yr.yMin, max: yr.yMax }),
+            x: chartCommonOptions().scales.x
+          }
+        })
+      });
+      charts.push(c1);
+    }
+
+    if (termLabels.length && document.getElementById('chart-terms-bar')) {
+      var c2 = new Chart(document.getElementById('chart-terms-bar'), {
+        type: 'bar',
+        data: {
+          labels: termLabels,
+          datasets: [{
+            label: 'Average %',
+            data: termAvgs,
+            backgroundColor: termAvgs.map(function (_, i) {
+              return 'rgb(56,189,248)';
+            }),
+            borderColor: '#38BDF8',
+            borderWidth: 1
+          }]
+        },
+        options: Object.assign({}, chartCommonOptions(), {
+          scales: {
+            y: Object.assign({}, chartCommonOptions().scales.y, { beginAtZero: false, suggestedMin: Math.max(0, Math.min.apply(null, termAvgs) - 8), suggestedMax: Math.min(100, Math.max.apply(null, termAvgs) + 8) }),
+            x: chartCommonOptions().scales.x
+          }
+        })
+      });
+      charts.push(c2);
+    }
+
+    if (subjects.length && document.getElementById('chart-subjects-h')) {
+      var sorted = subjects.slice().sort(function (a, b) { return b.average - a.average; });
+      var c3 = new Chart(document.getElementById('chart-subjects-h'), {
+        type: 'bar',
+        data: {
+          labels: sorted.map(function (s) { return s.name; }),
+          datasets: [{
+            label: 'Average %',
+            data: sorted.map(function (s) { return s.average; }),
+            backgroundColor: sorted.map(function (s) {
+              return gradeColor(resolveGrade(s.average)) + '99';
+            }),
+            borderColor: sorted.map(function (s) { return gradeColor(resolveGrade(s.average)); }),
+            borderWidth: 1
+          }]
+        },
+        options: Object.assign({}, chartCommonOptions(), {
+          indexAxis: 'y',
+          scales: {
+            x: Object.assign({}, chartCommonOptions().scales.x, { min: 0, max: 100 }),
+            y: Object.assign({}, chartCommonOptions().scales.y, { grid: { display: false } })
+          }
+        })
+      });
+      charts.push(c3);
+    }
+
+    var allScores = flattenScores(subjects);
+    if (allScores.length && document.getElementById('chart-grades')) {
+      var gradeOrder = scheme.length ? scheme.map(function (g) { return g.grade; }) : ['A', 'B', 'C+', 'C-', 'D', 'F'];
+      var gradeCounts = {};
+      gradeOrder.forEach(function (g) { gradeCounts[g] = 0; });
+      allScores.forEach(function (sc) {
+        var g = resolveGrade(sc);
+        gradeCounts[g] = (gradeCounts[g] || 0) + 1;
+      });
+      var gLabels = gradeOrder.filter(function (g) { return gradeCounts[g] > 0; });
+      if (gLabels.length === 0) gLabels = gradeOrder;
+      var gData = gLabels.map(function (g) { return gradeCounts[g] || 0; });
+      var gColors = gLabels.map(function (g) { return gradeColor(g); });
+      var c4 = new Chart(document.getElementById('chart-grades'), {
+        type: 'doughnut',
+        data: {
+          labels: gLabels,
+          datasets: [{ data: gData, backgroundColor: gColors.map(function (c) { return c + 'cc'; }), borderColor: '#0f172a', borderWidth: 2 }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#cbd5e1', font: CHART_LEGEND_FONT, padding: 16 },
+            },
+            tooltip: { titleFont: { size: 14, weight: '600' }, bodyFont: { size: 14 } },
+          },
+        }
+      });
+      charts.push(c4);
+    }
+
+    if (allScores.length && document.getElementById('chart-histogram')) {
+      var hist = buildHistogramCounts(allScores);
+      var c5 = new Chart(document.getElementById('chart-histogram'), {
+        type: 'bar',
+        data: {
+          labels: hist.labels,
+          datasets: [{ label: 'Count', data: hist.data, backgroundColor: 'rgb(56,189,248)', borderColor: '#38BDF8', borderWidth: 1 }]
+        },
+        options: Object.assign({}, chartCommonOptions(), {
+          scales: { y: Object.assign({}, chartCommonOptions().scales.y, { beginAtZero: true, ticks: { stepSize: 1 } }), x: chartCommonOptions().scales.x }
+        })
+      });
+      charts.push(c5);
+    }
+
+    var ranked = subjects.map(function (s) {
+      return { s: s, n: (s.scores_by_term || []).length };
+    }).sort(function (a, b) { return b.n - a.n; }).slice(0, 8).map(function (x) { return x.s; });
+
+    if (ranked.length && termLabels.length && document.getElementById('chart-multi-line')) {
+
+      var datasets = ranked.map(function (sub, idx) {
+        return {
+          label: sub.name,
+          data: termKeys.map(function (pk) {
+            var hit = (sub.scores_by_term || []).find(function (x) {
+              var xk = x.period_key != null ? x.period_key : x.term_name;
+              return xk === pk;
+            });
+            return hit ? hit.score : null;
+          }),
+          borderColor: LINE_COLORS[idx % LINE_COLORS.length],
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          spanGaps: false,
+          borderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        };
+      });
+
+      var yr2 = computeYRange(termAvgs.concat(allScores));
+
+      var c6 = new Chart(document.getElementById('chart-multi-line'), {
+        type: 'line',
+        data: { labels: termLabels, datasets: datasets },
+        options: Object.assign({}, chartCommonOptions(), {
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            y: Object.assign({}, chartCommonOptions().scales.y, { min: yr2.yMin, max: yr2.yMax }),
+            x: chartCommonOptions().scales.x
+          }
+        })
+      });
+      charts.push(c6);
+    }
+  }
+
+  function renderTermCards(terms) {
+    var wrap = document.getElementById('term-cards');
+    if (!terms || terms.length === 0) {
+      wrap.innerHTML = '<p class="text-sm text-slate-500">No terms.</p>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < terms.length; i++) {
+      var tm = terms[i];
+      var avg = tm.average != null ? tm.average : null;
+      var g = avg != null ? resolveGrade(avg) : '?';
+      var gc = gradeColor(g);
+      var selected = i === selectedTermIndex;
+      var baseCls = 'term-card w-full text-left rounded-xl border p-4 transition min-h-[100px] h-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400 ';
+      var stateCls = selected ? 'border-cyan-400 bg-cyan-950 ring-1 ring-cyan-700' : 'border-slate-800 bg-[#0B1120] hover:border-slate-600';
+      html += '<button type="button" role="tab" class="' + baseCls + stateCls + '" data-term-index="' + i + '"' +
+        ' aria-selected="' + (selected ? 'true' : 'false') + '">' +
+        '<div class="flex items-start justify-between gap-2">' +
+        '<span class="font-display text-sm font-semibold text-white line-clamp-2">' + escapeHtml(tm.term_name) + '</span>' +
+        '<span class="shrink-0 text-xs font-bold px-2 py-0.5 rounded-md" style="background:' + gc + '22;color:' + gc + ';">' + escapeHtml(g) + '</span></div>' +
+        '<div class="mt-3 text-xs text-slate-500">Avg <span class="text-slate-200 font-medium">' + (avg != null ? avg + '%' : '—') + '</span> · ' +
+        (tm.subject_count || 0) + ' subjects</div></button>';
+    }
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('.term-card').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(btn.getAttribute('data-term-index'), 10);
+        if (isNaN(idx)) return;
+        selectedTermIndex = idx;
+        renderTermCards(allTerms);
+        renderTermDetail(allTerms[selectedTermIndex]);
+      });
+    });
+  }
+
+  function renderTermDetail(term) {
+    var titleEl = document.getElementById('term-detail-title');
+    var metaEl = document.getElementById('term-detail-meta');
+    var badgesEl = document.getElementById('term-detail-badges');
+    var body = document.getElementById('term-detail-body');
+    if (!term || !term.results || term.results.length === 0) {
+      titleEl.textContent = '—';
+      metaEl.textContent = '';
+      badgesEl.innerHTML = '';
+      body.innerHTML = '<p class="text-sm text-slate-500">No rows.</p>';
+      return;
+    }
+    titleEl.textContent = term.term_name;
+    var avg = term.average != null ? term.average : null;
+    var g = avg != null ? resolveGrade(avg) : '?';
+    metaEl.textContent = (term.subject_count || term.results.length) + ' subjects · Term avg ' + (avg != null ? avg + '%' : '—');
+    badgesEl.innerHTML =
+      (avg != null ? '<span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200">Avg ' + avg + '%</span>' : '') +
+      '<span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200">High ' + (term.high != null ? term.high : '—') + '</span>' +
+      '<span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200">Low ' + (term.low != null ? term.low : '—') + '</span>' + gradeBadge(g);
+    var html = '<table class="w-full min-w-[280px] text-sm"><thead><tr class="text-left text-xs uppercase tracking-wider text-slate-500">' +
+      '<th class="pb-3 pr-4 font-semibold">Subject</th><th class="pb-3 pr-4 font-semibold text-right">Score</th><th class="pb-3 font-semibold text-right">Grade</th></tr></thead><tbody>';
+    for (var i = 0; i < term.results.length; i++) {
+      var r = term.results[i];
+      var grade = resolveGrade(r.score);
+      var border = i < term.results.length - 1 ? ' border-b border-slate-800/50' : '';
+      html += '<tr class="' + border + '"><td class="py-3 pr-4 text-slate-200">' + escapeHtml(r.subject) + '</td>' +
+        '<td class="py-3 pr-4 text-right font-semibold tabular-nums text-white">' + Number(r.score).toFixed(1) + '</td>' +
+        '<td class="py-3 text-right">' + gradeBadge(grade) + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    body.innerHTML = html;
+  }
+
+  function renderSubjectBars(subjects) {
+    var el = document.getElementById('subject-bars');
+    if (!subjects || subjects.length === 0) {
+      el.innerHTML = '<p class="text-sm text-slate-500">No subjects.</p>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < subjects.length; i++) {
+      var s = subjects[i];
+      var grade = resolveGrade(s.average);
+      var color = gradeColor(grade);
+      var pct = Math.max(s.average, 2);
+      var termBits = '';
+      if (s.scores_by_term && s.scores_by_term.length) {
+        termBits = '<div class="mt-2 flex flex-wrap gap-2">';
+        for (var t = 0; t < s.scores_by_term.length; t++) {
+          var st = s.scores_by_term[t];
+          var tg = resolveGrade(st.score);
+          var tc = gradeColor(tg);
+          termBits += '<span class="inline-flex items-center gap-1 rounded-md border border-slate-800/60 bg-[#0B1120] px-2 py-0.5 text-[11px] text-slate-400">' +
+            '<span class="max-w-[100px] truncate" title="' + escapeHtml(st.term_name) + '">' + escapeHtml(st.term_name) + '</span>' +
+            '<span class="font-semibold tabular-nums" style="color:' + tc + '">' + Number(st.score).toFixed(1) + '</span></span>';
+        }
+        termBits += '</div>';
+      }
+      html += '<div class="mb-5 last:mb-0 rounded-lg border border-slate-800 bg-[#0B1120] p-3 sm:p-4">' +
+        '<div class="flex items-center gap-3">' +
+        '<span class="w-[min(40%,200px)] shrink-0 truncate text-right text-sm text-slate-300" title="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</span>' +
+        '<div class="min-w-0 flex-1"><div class="flex h-7 items-center gap-2">' +
+        '<div class="h-3 flex-1 overflow-hidden rounded-full bg-[#0B1120]">' +
+        '<div class="h-full rounded-full" style="width:' + pct + '%;background-color:' + color + '"></div></div>' +
+        '<span class="w-14 shrink-0 text-right text-sm font-semibold tabular-nums text-white">' + s.average.toFixed(1) + '</span>' +
+        '<span class="hidden sm:inline">' + gradeBadge(grade) + '</span></div>' +
+        '<div class="mt-1 flex justify-end sm:hidden">' + gradeBadge(grade) + '</div>' + termBits + '</div></div></div>';
+    }
+    el.innerHTML = html;
+  }
+
+  function hideAll() {
+    document.getElementById('anal-loading').classList.add('hidden');
+    document.getElementById('anal-content').classList.add('hidden');
+    document.getElementById('anal-empty').classList.add('hidden');
+    document.getElementById('anal-error').classList.add('hidden');
+  }
+
+  function showEmpty() {
+    hideAll();
+    document.getElementById('anal-empty').classList.remove('hidden');
+  }
+
+  function showContent() {
+    hideAll();
+    document.getElementById('anal-content').classList.remove('hidden');
+    if (typeof gsap !== 'undefined') {
+      gsap.from('.anal-section', { autoAlpha: 0, y: 18, duration: 0.4, stagger: 0.07, ease: 'power2.out' });
+    }
+  }
+
+  async function safeFetch(url) {
+    var res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  document.addEventListener('DOMContentLoaded', async function () {
+    try {
+      var summary = await safeFetch(URLS.summary);
+      var trend = await safeFetch(URLS.trend);
+      var subjects = await safeFetch(URLS.subjects);
+      var termsPayload = await safeFetch(URLS.terms);
+      var schemeData = await safeFetch(URLS.scheme);
+      scheme = schemeData.scheme || [];
+      allTerms = termsPayload.terms || [];
+
+      if (!summary.subjects_count || summary.subjects_count === 0) {
+        hideAll();
+        document.getElementById('anal-loading').classList.add('hidden');
+        showEmpty();
+        return;
+      }
+
+      renderCharts(trend, subjects);
+      selectedTermIndex = allTerms.length > 0 ? allTerms.length - 1 : 0;
+      renderTermCards(allTerms);
+      renderTermDetail(allTerms.length ? allTerms[selectedTermIndex] : null);
+      renderSubjectBars(subjects.subjects);
+      showContent();
+    } catch (err) {
+      hideAll();
+      document.getElementById('anal-loading').classList.add('hidden');
+      document.getElementById('anal-error').classList.remove('hidden');
+    }
+  });
+})();
+</script>
+{% endblock %}

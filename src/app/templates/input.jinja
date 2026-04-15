@@ -1,0 +1,617 @@
+{% extends "base.jinja" %}
+
+{% block title %}Manage results — PerformanceLens{% endblock %}
+{% block page_title %}Manage results{% endblock %}
+
+{% block content %}
+<style>
+    input.score-input::-webkit-outer-spin-button,
+    input.score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input.score-input { -moz-appearance: textfield; }
+</style>
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <section class="bg-[#0F172A] border border-slate-800 rounded-xl p-6" aria-labelledby="saved-periods-heading">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+            <h2 id="saved-periods-heading" class="text-sm font-semibold text-slate-300">Saved term periods</h2>
+            <button type="button" onclick="loadSavedPeriods()" class="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition">
+                <i class="fa-solid fa-arrow-rotate-right mr-1" aria-hidden="true"></i>Refresh
+            </button>
+        </div>
+        <div id="periods-loading" class="text-sm text-slate-500 py-4 hidden"><i class="fa-solid fa-spinner fa-spin mr-2" aria-hidden="true"></i>Loading…</div>
+        <div id="periods-empty" class="text-sm text-slate-600 py-2">No saved periods yet.</div>
+        <div id="periods-table-wrap" class="hidden overflow-x-auto rounded-lg border border-slate-800/40">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-800 bg-[#0B1120]">
+                        <th class="px-4 py-3 font-semibold">Display</th>
+                        <th class="px-4 py-3 font-semibold">School year</th>
+                        <th class="px-4 py-3 font-semibold">Term</th>
+                        <th class="px-4 py-3 font-semibold text-right">Rows</th>
+                        <th class="px-4 py-3 font-semibold text-right w-24">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="periods-tbody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="bg-[#0F172A] border border-slate-800 rounded-xl p-6">
+        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Period for new save</p>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2" for="schoolYearInput">School year</label>
+                <input type="text" id="schoolYearInput" class="w-full bg-[#0B1120] border border-slate-800/50 text-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-cyan-500/50 transition outline-none" placeholder="e.g. 2024-2025" autocomplete="off">
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2" for="termLabelInput">Term <span class="text-red-400/90">*</span></label>
+                <input type="text" id="termLabelInput" class="w-full bg-[#0B1120] border border-slate-800/50 text-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-cyan-500/50 transition outline-none" placeholder="e.g. Term 1, First Term" required>
+            </div>
+        </div>
+        <div class="mt-4">
+            <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2" for="termDisplayInput">Label on dashboard (optional)</label>
+            <input type="text" id="termDisplayInput" class="w-full bg-[#0B1120] border border-slate-800/50 text-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-cyan-500/50 transition outline-none" placeholder="Leave blank to combine year + term automatically">
+        </div>
+    </div>
+
+    <div class="flex gap-2 mb-2">
+        <button type="button" onclick="switchMethod('upload')" id="btn-upload" class="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-cyan-950 text-cyan-400 border border-cyan-700">
+            <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Upload file
+        </button>
+        <button type="button" onclick="switchMethod('manual')" id="btn-manual" class="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors text-slate-500 border border-slate-800 hover:bg-slate-800">
+            <i class="fa-solid fa-keyboard mr-2"></i>Enter manually
+        </button>
+    </div>
+
+    <div id="upload-section">
+        <div class="relative border-2 border-dashed border-slate-700 rounded-xl p-10 text-center transition-colors hover:border-cyan-500 hover:bg-cyan-950 cursor-pointer group"
+             id="dropZone" onclick="document.getElementById('fileInput').click()">
+            
+            <div class="absolute top-[-1px] left-[-1px] w-6 h-6 border-t-2 border-l-2 border-cyan-400 rounded-tl-xl group-hover:border-cyan-300 transition-colors"></div>
+            <div class="absolute bottom-[-1px] right-[-1px] w-6 h-6 border-b-2 border-r-2 border-cyan-400 rounded-br-xl group-hover:border-cyan-300 transition-colors"></div>
+
+            <input type="file" id="fileInput" class="hidden" accept=".pdf,.docx,.xlsx,.xls,.csv" onchange="handleFileSelect(event)">
+            
+            <div id="upload-placeholder">
+                <i class="fa-solid fa-file-import text-3xl text-slate-600 mb-3 block"></i>
+                <p class="text-sm text-slate-400 mb-1">Drop your report card here</p>
+                <p class="text-xs text-slate-600">Supports PDF, Word, Excel, CSV</p>
+            </div>
+
+            <div id="upload-loading" class="hidden">
+                <i class="fa-solid fa-spinner fa-spin text-3xl text-cyan-400 mb-3 block"></i>
+                <p class="text-sm text-slate-400">Parsing document...</p>
+            </div>
+        </div>
+
+        <div id="review-container" class="hidden mt-6 bg-[#0F172A] border border-slate-800 rounded-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-800/50 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-300">Review extracted data</h3>
+                <button type="button" onclick="resetUpload()" class="text-xs text-slate-500 hover:text-slate-300 transition"><i class="fa-solid fa-arrow-rotate-left mr-1"></i>Redo</button>
+            </div>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-800/30">
+                        <th class="px-6 py-3 font-semibold">Subject</th>
+                        <th class="px-6 py-3 font-semibold text-right">Score</th>
+                    </tr>
+                </thead>
+                <tbody id="review-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="manual-section" class="hidden space-y-4">
+        <div class="rounded-xl border border-slate-800 bg-[#0F172A] p-4 sm:p-5">
+            <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Build your list</p>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div class="min-w-0 flex-1">
+                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2" for="manualSubjectDraft">Subject name</label>
+                    <input type="text" id="manualSubjectDraft" class="w-full bg-[#0B1120] border border-slate-800/50 text-slate-200 rounded-lg px-4 py-2.5 text-sm focus:border-cyan-500/50 transition outline-none" placeholder="e.g. Chemistry, English Language" autocomplete="off">
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="addManualRowFromDraft()" class="rounded-lg bg-cyan-950 px-4 py-2.5 text-sm font-semibold text-cyan-400 border border-cyan-700 hover:bg-cyan-900 transition">
+                        <i class="fa-solid fa-plus mr-1.5 text-xs" aria-hidden="true"></i>Add subject
+                    </button>
+                    <button type="button" onclick="importSavedSubjects()" class="rounded-lg border border-slate-700/80 bg-[#0B1120] px-4 py-2.5 text-sm font-semibold text-slate-400 hover:border-slate-600 hover:text-slate-200 transition">
+                        Import saved subjects
+                    </button>
+                </div>
+            </div>
+            <p class="mt-3 text-xs text-slate-600 leading-relaxed">Subject names are matched without caring about capitals or extra spaces. Spelling must still match an existing subject to merge with past data—typos are treated as new subjects.</p>
+        </div>
+
+        <div class="bg-[#0F172A] border border-slate-800 rounded-xl overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-800/30">
+                        <th class="px-6 py-3 font-semibold">Subject</th>
+                        <th class="px-6 py-3 font-semibold text-right w-[200px]">Score</th>
+                        <th class="px-4 py-3 w-14"></th>
+                    </tr>
+                </thead>
+                <tbody id="manual-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="error-msg" class="hidden p-4 bg-red-950 border border-red-600 rounded-lg text-sm text-red-200 flex items-center gap-2">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="error-text"></span>
+    </div>
+
+    <div class="flex justify-end pt-2">
+        <button type="button" onclick="saveResults()" id="saveBtn" class="bg-cyan-400 hover:bg-cyan-300 text-[#0B1120] font-bold px-8 py-3 rounded-lg transition-colors text-sm">
+            Save results <i class="fa-solid fa-check ml-2"></i>
+        </button>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentMethod = 'upload';
+    let parsedData = [];
+
+    const URL_PERIODS = "{{ url_for('main.api_results_periods') }}";
+    const URL_DELETE_PERIOD = "{{ url_for('main.api_results_period_delete') }}";
+    const URL_SAVE = "{{ url_for('main.api_results_save') }}";
+
+    function subjectNormKey(name) {
+        return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
+    function scoreStepperHtml(extraInputClass, dataAttrs, value) {
+        var v = value != null && value !== '' && !isNaN(Number(value)) ? Number(value) : '';
+        var valStr = v === '' ? '' : String(v);
+        return (
+            '<div class="score-stepper inline-flex items-center justify-end gap-0.5 sm:gap-1">' +
+            '<button type="button" class="score-dec inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700/80 bg-[#0B1120] text-slate-300 hover:bg-slate-800 hover:text-cyan-400 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500" aria-label="Decrease score">' +
+            '<i class="fa-solid fa-minus text-xs" aria-hidden="true"></i></button>' +
+            '<input type="number" min="0" max="100" step="0.5" value="' + valStr + '" ' + dataAttrs +
+            ' class="score-input ' + extraInputClass + ' w-[4.25rem] sm:w-16 rounded-lg border border-slate-800/50 bg-[#0B1120] py-2 text-center text-sm font-semibold tabular-nums text-slate-200 focus:border-cyan-500/50 outline-none" />' +
+            '<button type="button" class="score-inc inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700/80 bg-[#0B1120] text-slate-300 hover:bg-slate-800 hover:text-cyan-400 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500" aria-label="Increase score">' +
+            '<i class="fa-solid fa-plus text-xs" aria-hidden="true"></i></button></div>'
+        );
+    }
+
+    document.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('.score-dec, .score-inc');
+        if (!btn) return;
+        var stepper = btn.closest('.score-stepper');
+        if (!stepper) return;
+        var inp = stepper.querySelector('.score-input');
+        if (!inp) return;
+        var step = ev.shiftKey ? 5 : 1;
+        var v = parseFloat(inp.value);
+        if (isNaN(v)) v = 0;
+        if (btn.classList.contains('score-dec')) {
+            v = Math.max(0, v - step);
+        } else {
+            v = Math.min(100, v + step);
+        }
+        inp.value = (Math.round(v * 10) / 10).toString();
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    function applyPeriodFromUpload(data) {
+        if (data.school_year != null) {
+            document.getElementById('schoolYearInput').value = data.school_year || '';
+        }
+        if (data.term_label != null) {
+            document.getElementById('termLabelInput').value = data.term_label || '';
+        }
+        var disp = data.term_display || data.term_detected || '';
+        if (disp) {
+            document.getElementById('termDisplayInput').value = disp;
+        }
+    }
+
+    async function loadSavedPeriods() {
+        var loadEl = document.getElementById('periods-loading');
+        var emptyEl = document.getElementById('periods-empty');
+        var wrap = document.getElementById('periods-table-wrap');
+        var tbody = document.getElementById('periods-tbody');
+        loadEl.classList.remove('hidden');
+        emptyEl.classList.add('hidden');
+        wrap.classList.add('hidden');
+        try {
+            var res = await fetch(URL_PERIODS);
+            var data = await res.json();
+            var periods = data.periods || [];
+            loadEl.classList.add('hidden');
+            tbody.innerHTML = '';
+            if (periods.length === 0) {
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+            emptyEl.classList.add('hidden');
+            wrap.classList.remove('hidden');
+            periods.forEach(function (p) {
+                var tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-800/30 hover:bg-slate-800/15';
+                tr.innerHTML =
+                    '<td class="px-4 py-3 text-slate-200">' + escapeHtml(p.term_name) + '</td>' +
+                    '<td class="px-4 py-3 text-slate-400">' + escapeHtml(p.school_year || '—') + '</td>' +
+                    '<td class="px-4 py-3 text-slate-400">' + escapeHtml(p.term_label) + '</td>' +
+                    '<td class="px-4 py-3 text-right tabular-nums text-slate-500">' + p.row_count + '</td>' +
+                    '<td class="px-4 py-3 text-right">' +
+                    '<button type="button" class="text-xs font-semibold text-red-400 hover:text-red-300 delete-period-btn" data-sy="' + escapeAttr(p.school_year) + '" data-tl="' + escapeAttr(p.term_label) + '">Delete</button></td>';
+                tbody.appendChild(tr);
+            });
+            tbody.querySelectorAll('.delete-period-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    deletePeriod(btn.getAttribute('data-sy'), btn.getAttribute('data-tl'));
+                });
+            });
+        } catch (e) {
+            loadEl.classList.add('hidden');
+            emptyEl.textContent = 'Could not load saved periods.';
+            emptyEl.classList.remove('hidden');
+        }
+    }
+
+    function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function escapeAttr(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    async function deletePeriod(schoolYear, termLabel) {
+        if (!confirm('Delete all results for this term period? This cannot be undone.')) return;
+        try {
+            var res = await fetch(URL_DELETE_PERIOD, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ school_year: schoolYear || '', term_label: termLabel || '' }),
+            });
+            var data = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                showError(data.message || 'Delete failed.');
+                return;
+            }
+            loadSavedPeriods();
+        } catch (e) {
+            showError('Network error while deleting.');
+        }
+    }
+
+    function manualRowsHaveSubjectKey(key) {
+        var inputs = document.querySelectorAll('#manual-tbody .manual-subject');
+        for (var i = 0; i < inputs.length; i++) {
+            if (subjectNormKey(inputs[i].value) === key) return true;
+        }
+        return false;
+    }
+
+    function renderManualEmptyHint() {
+        var tbody = document.getElementById('manual-tbody');
+        tbody.innerHTML =
+            '<tr id="manual-empty-hint"><td colspan="3" class="px-6 py-10 text-center text-sm text-slate-600">' +
+            'Add subjects above, or use <span class="text-slate-500">Import saved subjects</span> if you already have a list.</td></tr>';
+    }
+
+    function removeManualEmptyHint() {
+        var el = document.getElementById('manual-empty-hint');
+        if (el) el.remove();
+    }
+
+    function addManualRow(subjectName, scoreVal, silentDuplicate) {
+        var name = (subjectName || '').trim();
+        var tbody = document.getElementById('manual-tbody');
+        if (name) {
+            var k = subjectNormKey(name);
+            if (manualRowsHaveSubjectKey(k)) {
+                if (!silentDuplicate) showError('That subject is already in the list.');
+                return;
+            }
+        }
+        removeManualEmptyHint();
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-manual-row', '1');
+        tr.className = 'border-b border-slate-800/30 hover:bg-slate-800/20 transition-colors';
+        tr.innerHTML =
+            '<td class="px-6 py-3">' +
+            '<input type="text" class="manual-subject w-full min-w-[140px] bg-[#0B1120] border border-slate-800/50 text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-cyan-500/50 outline-none" value="' + escapeAttr(name) + '" placeholder="Subject name" />' +
+            '</td>' +
+            '<td class="px-6 py-3 text-right">' + scoreStepperHtml('manual-score', '', scoreVal) + '</td>' +
+            '<td class="px-4 py-3 text-center">' +
+            '<button type="button" class="manual-row-remove text-slate-600 hover:text-red-400 transition p-2 rounded-lg hover:bg-red-500/10" title="Remove row" aria-label="Remove subject row">' +
+            '<i class="fa-solid fa-trash-can text-sm" aria-hidden="true"></i></button></td>';
+        var removeBtn = tr.querySelector('.manual-row-remove');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                tr.remove();
+                if (!document.querySelector('#manual-tbody tr[data-manual-row]')) {
+                    renderManualEmptyHint();
+                }
+            });
+        }
+        tbody.appendChild(tr);
+        hideError();
+    }
+
+    function addManualRowFromDraft() {
+        var inp = document.getElementById('manualSubjectDraft');
+        var name = inp.value.trim();
+        if (!name) {
+            showError('Enter a subject name first.');
+            return;
+        }
+        if (manualRowsHaveSubjectKey(subjectNormKey(name))) {
+            showError('That subject is already in the list.');
+            return;
+        }
+        addManualRow(name, '', false);
+        inp.value = '';
+        inp.focus();
+    }
+
+    async function importSavedSubjects() {
+        hideError();
+        try {
+            var res = await fetch("{{ url_for('main.api_user_subjects') }}");
+            if (!res.ok) throw new Error('fetch');
+            var data = await res.json();
+            var list = data.subjects || [];
+            if (list.length === 0) {
+                showError('No saved subjects yet. Add names manually.');
+                return;
+            }
+            var added = 0;
+            list.forEach(function (sub) {
+                var k = subjectNormKey(sub);
+                if (!k) return;
+                var before = document.querySelectorAll('#manual-tbody tr[data-manual-row]').length;
+                addManualRow(sub, '', true);
+                if (document.querySelectorAll('#manual-tbody tr[data-manual-row]').length > before) added++;
+            });
+            if (added === 0) {
+                showError('All saved subjects are already in your list.');
+            }
+        } catch (e) {
+            showError('Could not load saved subjects.');
+        }
+    }
+
+    function prepareManualSection() {
+        var tbody = document.getElementById('manual-tbody');
+        if (!tbody.querySelector('tr')) {
+            renderManualEmptyHint();
+        }
+    }
+
+    function switchMethod(method) {
+        currentMethod = method;
+        const uploadSection = document.getElementById('upload-section');
+        const manualSection = document.getElementById('manual-section');
+        const btnUpload = document.getElementById('btn-upload');
+        const btnManual = document.getElementById('btn-manual');
+
+        hideError();
+
+        if (method === 'upload') {
+            uploadSection.classList.remove('hidden');
+            manualSection.classList.add('hidden');
+            btnUpload.className = 'flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-cyan-950 text-cyan-400 border border-cyan-700';
+            btnManual.className = 'flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors text-slate-500 border border-slate-800 hover:bg-slate-800';
+        } else {
+            uploadSection.classList.add('hidden');
+            manualSection.classList.remove('hidden');
+            btnManual.className = 'flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-cyan-950 text-cyan-400 border border-cyan-700';
+            btnUpload.className = 'flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors text-slate-500 border border-slate-800 hover:bg-slate-800';
+            prepareManualSection();
+        }
+    }
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        uploadFile(file);
+    }
+
+    async function uploadFile(file) {
+        hideError();
+        const placeholder = document.getElementById('upload-placeholder');
+        const loading = document.getElementById('upload-loading');
+        const reviewContainer = document.getElementById('review-container');
+        
+        placeholder.classList.add('hidden');
+        loading.classList.remove('hidden');
+        reviewContainer.classList.add('hidden');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch("{{ url_for('main.api_results_upload') }}", {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            loading.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+
+            if (data.status === 'error') {
+                showError(data.message || "Failed to parse file.");
+                return;
+            }
+
+            applyPeriodFromUpload(data);
+
+            parsedData = data.data;
+            renderReviewTable(parsedData);
+            reviewContainer.classList.remove('hidden');
+
+        } catch (err) {
+            loading.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            showError("Network error or server failed to process file.");
+        }
+    }
+
+    function renderReviewTable(data) {
+        const tbody = document.getElementById('review-tbody');
+        tbody.innerHTML = '';
+        data.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-800/30 hover:bg-slate-800/20 transition-colors';
+            tr.innerHTML =
+                '<td class="px-6 py-3 text-slate-300">' + escapeHtml(item.subject) + '</td>' +
+                '<td class="px-6 py-3 text-right">' +
+                scoreStepperHtml('upload-score', 'data-index="' + index + '"', item.score) +
+                '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function resetUpload() {
+        document.getElementById('review-container').classList.add('hidden');
+        document.getElementById('fileInput').value = '';
+        parsedData = [];
+    }
+
+    const dropZone = document.getElementById('dropZone');
+    ['dragenter', 'dragover'].forEach(e => {
+        dropZone.addEventListener(e, (ev) => { ev.preventDefault(); dropZone.classList.add('border-cyan-500/60', 'bg-cyan-500/[0.03]'); });
+    });
+    ['dragleave', 'drop'].forEach(e => {
+        dropZone.addEventListener(e, (ev) => { ev.preventDefault(); dropZone.classList.remove('border-cyan-500/60', 'bg-cyan-500/[0.03]'); });
+    });
+    dropZone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+    });
+
+    document.getElementById('manualSubjectDraft').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addManualRowFromDraft();
+        }
+    });
+
+    function buildSavePayload(resultsToSave, overwrite) {
+        var sy = document.getElementById('schoolYearInput').value.trim();
+        var tl = document.getElementById('termLabelInput').value.trim();
+        var tn = document.getElementById('termDisplayInput').value.trim();
+        var body = {
+            school_year: sy,
+            term_label: tl,
+            results: resultsToSave,
+        };
+        if (tn) body.term_name = tn;
+        if (overwrite) body.overwrite = true;
+        return body;
+    }
+
+    function collectManualResults() {
+        var rows = document.querySelectorAll('#manual-tbody tr[data-manual-row]');
+        var out = [];
+        var incomplete = false;
+        rows.forEach(function (tr) {
+            var subInp = tr.querySelector('.manual-subject');
+            var scoreInp = tr.querySelector('.score-input');
+            if (!subInp || !scoreInp) return;
+            var sub = subInp.value.trim();
+            var val = scoreInp.value.trim();
+            if (!sub) return;
+            if (val === '') {
+                incomplete = true;
+                return;
+            }
+            out.push({ subject: sub, score: parseFloat(val) });
+        });
+        return { rows: out, incomplete: incomplete };
+    }
+
+    async function saveResults() {
+        const termLabel = document.getElementById('termLabelInput').value.trim();
+        if (!termLabel) { showError("Please enter a term (e.g. Term 1)."); return; }
+
+        let resultsToSave = [];
+
+        if (currentMethod === 'upload') {
+            if (parsedData.length === 0) { showError("Please upload and review a file first."); return; }
+            document.querySelectorAll('.upload-score').forEach(input => {
+                const idx = input.dataset.index;
+                parsedData[idx].score = parseFloat(input.value) || 0;
+            });
+            resultsToSave = parsedData;
+        } else {
+            var collected = collectManualResults();
+            if (collected.incomplete) {
+                showError('Enter a score for every subject in the list (or remove the row).');
+                return;
+            }
+            if (collected.rows.length === 0) {
+                showError('Add at least one subject and score.');
+                return;
+            }
+            resultsToSave = collected.rows;
+        }
+
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+        btn.innerText = 'Saving...';
+
+        try {
+            let body = buildSavePayload(resultsToSave, false);
+            let res = await fetch(URL_SAVE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            let data = await res.json().catch(function () { return {}; });
+
+            if (res.status === 409 && data.status === 'conflict') {
+                if (confirm('Results already exist for this school year and term. Replace them with this upload?')) {
+                    body = buildSavePayload(resultsToSave, true);
+                    res = await fetch(URL_SAVE, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                    });
+                    data = await res.json().catch(function () { return {}; });
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Save results <i class="fa-solid fa-check ml-2"></i>';
+                    return;
+                }
+            }
+
+            if (res.ok && data.status === 'success') {
+                window.location.href = "{{ url_for('main.dashboard') }}";
+            } else {
+                throw new Error(data.message || 'Save failed');
+            }
+        } catch (err) {
+            showError(err.message || "Failed to save results to database.");
+            btn.disabled = false;
+            btn.innerHTML = 'Save results <i class="fa-solid fa-check ml-2"></i>';
+        }
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('error-msg');
+        document.getElementById('error-text').innerText = msg;
+        el.classList.remove('hidden');
+    }
+    function hideError() {
+        document.getElementById('error-msg').classList.add('hidden');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadSavedPeriods();
+        if (typeof gsap === 'undefined') return;
+        var els = document.querySelectorAll('#page-content-root .max-w-4xl > *');
+        if (els.length) {
+            gsap.from(els, { autoAlpha: 0, y: 14, duration: 0.34, stagger: 0.06, ease: 'power2.out', delay: 0.1 });
+        }
+    });
+</script>
+{% endblock %}

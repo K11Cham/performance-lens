@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unlock — PerformanceLens</title>
+    <script src="{{ url_for('static', filename='vendor/tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="{{ url_for('static', filename='vendor/gsap.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fonts.css') }}">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            background: #0B1120;
+            color: #94A3B8;
+        }
+        .font-display { font-family: 'Space Grotesk', sans-serif; }
+        :focus-visible { outline: 2px solid #38BDF8; outline-offset: 2px; }
+
+        .unlock-card {
+            width: 100%;
+            max-width: 28rem;
+            border-radius: 16px;
+            border: 1px solid rgb(51, 65, 85);
+            background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
+            box-shadow: 0 24px 80px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
+            padding: 28px 24px 26px;
+        }
+        @media (min-width: 640px) {
+            .unlock-card { padding: 32px 32px 28px; }
+        }
+
+        .pin-wrap {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            padding: 12px 0;
+            cursor: text;
+        }
+        .pin-dot {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid rgb(148, 163, 184);
+            background: transparent;
+            transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+            flex-shrink: 0;
+        }
+        .pin-dot.filled {
+            background: #38BDF8;
+            border-color: #38BDF8;
+            box-shadow: 0 0 14px rgb(56, 189, 248);
+        }
+        .pin-dot.error {
+            border-color: #F87171;
+            background: rgb(248, 113, 113);
+        }
+        .pin-hidden {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: text;
+            border: none;
+            background: transparent;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 48px;
+            width: 100%;
+            padding: 0 24px;
+            border: none;
+            border-radius: 10px;
+            background: #38BDF8;
+            color: #0B1120;
+            font-weight: 700;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: transform 0.12s, background 0.2s;
+        }
+        .btn-primary:hover { background: #7DD3FC; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { opacity: 0.45; pointer-events: none; }
+
+        .err-msg {
+            display: none;
+            color: #F87171;
+            font-size: 12px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .err-msg.is-visible { display: block; }
+    </style>
+</head>
+<body class="min-h-screen antialiased flex items-center justify-center px-5 py-10">
+    <div class="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+        <div class="absolute -left-20 top-1/4 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl"></div>
+        <div class="absolute -right-16 bottom-1/4 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl"></div>
+    </div>
+
+    <div id="unlock-root" class="relative z-10 w-full max-w-md">
+        <div class="unlock-card mx-auto">
+            <p class="text-center text-xs font-bold uppercase tracking-wider text-cyan-400/90">PerformanceLens</p>
+            <h1 class="font-display mt-3 text-center text-xl font-bold text-white sm:text-2xl">Enter your PIN</h1>
+            <p class="mt-2 text-center text-sm text-slate-500">Hi, <span class="text-slate-400">{{ user_name }}</span>. Unlock this session to continue.</p>
+
+            <label class="mt-8 block text-center text-[11px] font-bold uppercase tracking-wider text-slate-500" for="unlockPin">PIN</label>
+            <div class="pin-wrap" id="pinWrap">
+                <div class="pin-dot" id="ud1" aria-hidden="true"></div>
+                <div class="pin-dot" id="ud2" aria-hidden="true"></div>
+                <div class="pin-dot" id="ud3" aria-hidden="true"></div>
+                <div class="pin-dot" id="ud4" aria-hidden="true"></div>
+                <input type="password" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
+                    class="pin-hidden" id="unlockPin" name="pin" aria-label="4-digit PIN">
+            </div>
+
+            <p class="err-msg" id="unlockErr" role="alert"></p>
+
+            <button type="button" class="btn-primary mt-6" id="unlockBtn">Unlock</button>
+            <p class="mt-5 text-center">
+                <button type="button" id="unlockSignOut" class="text-sm font-medium text-slate-500 underline decoration-slate-600 underline-offset-2 hover:text-slate-300">
+                    Sign out
+                </button>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const input = document.getElementById('unlockPin');
+            const btn = document.getElementById('unlockBtn');
+            const signOutBtn = document.getElementById('unlockSignOut');
+            const err = document.getElementById('unlockErr');
+            const dots = [1, 2, 3, 4].map((i) => document.getElementById('ud' + i));
+
+            function clearError() {
+                err.classList.remove('is-visible');
+                err.textContent = '';
+                dots.forEach((d) => d.classList.remove('error'));
+            }
+
+            function syncDots() {
+                const v = input.value.replace(/\D/g, '').slice(0, 4);
+                input.value = v;
+                dots.forEach((d, i) => d.classList.toggle('filled', v.length > i));
+            }
+
+            input.addEventListener('input', function () {
+                clearError();
+                syncDots();
+            });
+
+            document.getElementById('pinWrap').addEventListener('click', function () {
+                input.focus();
+            });
+
+            btn.addEventListener('click', async function () {
+                const pin = (input.value || '').trim();
+                if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                    err.textContent = 'Enter all 4 digits.';
+                    err.classList.add('is-visible');
+                    dots.forEach((d) => d.classList.add('error'));
+                    return;
+                }
+                clearError();
+                btn.disabled = true;
+                try {
+                    const res = await fetch("{{ url_for('main.api_unlock') }}", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ pin }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        err.textContent = data.message || 'Could not unlock.';
+                        err.classList.add('is-visible');
+                        dots.forEach((d) => d.classList.add('error'));
+                        input.value = '';
+                        syncDots();
+                        input.focus();
+                        return;
+                    }
+                    window.location.href = "{{ url_for('main.dashboard') }}";
+                } catch (e) {
+                    err.textContent = 'Network error. Try again.';
+                    err.classList.add('is-visible');
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+
+            input.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter') {
+                    ev.preventDefault();
+                    btn.click();
+                }
+            });
+
+            if (typeof gsap !== 'undefined') {
+                gsap.from('#unlock-root .unlock-card', {
+                    opacity: 0,
+                    y: 20,
+                    duration: 0.45,
+                    ease: 'power2.out',
+                });
+            }
+
+            if (signOutBtn) {
+                signOutBtn.addEventListener('click', async function () {
+                    try {
+                        await fetch("{{ url_for('main.api_logout') }}", {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: '{}',
+                        });
+                    } catch (e) {}
+                    window.location.href = "{{ url_for('main.home') }}";
+                });
+            }
+
+            setTimeout(function () { input.focus(); }, 120);
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PerformanceLens{% endblock %}</title>
+
+    <!-- OFFLINE LOCAL ASSETS -->
+    <script src="{{ url_for('static', filename='vendor/tailwind.js') }}"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fonts.css') }}">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #0B1120;
+            color: #94A3B8;
+        }
+
+        .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        :focus {
+            outline: none;
+        }
+
+        :focus-visible {
+            outline: 2px solid #38BDF8;
+            outline-offset: 2px;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+        }
+
+        input:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px #0B1120, 0 0 0 4px rgb(56, 189, 248);
+        }
+
+        button:focus:not(:focus-visible),
+        a:focus:not(:focus-visible) {
+            outline: none;
+        }
+
+        /* === SHAPES (Inside main content, not sidebar) === */
+        @keyframes floatY {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        @keyframes floatX {
+
+            0%,
+            100% {
+                transform: translateX(0px);
+            }
+
+            50% {
+                transform: translateX(15px);
+            }
+        }
+
+        @keyframes spinSlow {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .shape-circle-1 {
+            position: fixed;
+            top: 15%;
+            right: 15%;
+            width: 200px;
+            height: 200px;
+            border: 1px solid rgb(148, 163, 184);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            animation: spinSlow 60s linear infinite;
+        }
+
+        .shape-circle-2 {
+            position: fixed;
+            bottom: 20%;
+            right: 40%;
+            width: 100px;
+            height: 100px;
+            border: 1px solid rgb(56, 189, 248);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            animation: spinSlow 45s linear infinite reverse;
+        }
+
+        .shape-plus {
+            position: fixed;
+            top: 70%;
+            right: 10%;
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 0;
+            animation: spinSlow 20s linear infinite;
+        }
+
+        .shape-plus::before,
+        .shape-plus::after {
+            content: '';
+            position: absolute;
+            background: rgb(56, 189, 248);
+            border-radius: 2px;
+        }
+
+        .shape-plus::before {
+            top: 9px;
+            left: 0;
+            width: 20px;
+            height: 2px;
+        }
+
+        .shape-plus::after {
+            top: 0;
+            left: 9px;
+            width: 2px;
+            height: 20px;
+        }
+
+        .shape-dots {
+            position: fixed;
+            top: 25%;
+            right: 25%;
+            pointer-events: none;
+            z-index: 0;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            animation: floatY 14s ease-in-out infinite;
+        }
+
+        .shape-dots span {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: rgb(148, 163, 184);
+        }
+
+        /* === SIDEBAR === */
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            color: #64748B;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-left: 2px solid transparent;
+            margin: 2px 0;
+        }
+
+        .sidebar-link:hover {
+            background: rgb(148, 163, 184);
+            color: #CBD5E1;
+        }
+
+        .sidebar-link.active {
+            background: rgb(56, 189, 248);
+            color: #0B1120;
+            border-left-color: #38BDF8;
+            font-weight: 600;
+        }
+
+        .sidebar-link i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* === SCROLLBAR === */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgb(148, 163, 184);
+            border-radius: 999px;
+        }
+
+        /* === SMOOTH ANIMATIONS === */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .fade-in-down {
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .slide-in-left {
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        .slide-in-right {
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .smooth-transition {
+            transition: all 0.3s ease;
+        }
+
+        .smooth-opacity {
+            transition: opacity 0.3s ease;
+        }
+
+        .smooth-transform {
+            transition: transform 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Stagger animations for lists */
+        .stagger-fade-in > * {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .stagger-fade-in > *:nth-child(1) { animation-delay: 0.1s; }
+        .stagger-fade-in > *:nth-child(2) { animation-delay: 0.2s; }
+        .stagger-fade-in > *:nth-child(3) { animation-delay: 0.3s; }
+        .stagger-fade-in > *:nth-child(4) { animation-delay: 0.4s; }
+        .stagger-fade-in > *:nth-child(5) { animation-delay: 0.5s; }
+        .stagger-fade-in > *:nth-child(6) { animation-delay: 0.6s; }
+        .stagger-fade-in > *:nth-child(7) { animation-delay: 0.7s; }
+        .stagger-fade-in > *:nth-child(8) { animation-delay: 0.8s; }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- Mobile Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black z-40 hidden md:hidden" role="presentation" aria-hidden="true" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" aria-label="Main navigation"
+        class="fixed left-0 top-0 h-full w-64 bg-[#0F172A] border-r border-slate-800/50 z-50 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-slate-800/50 flex-shrink-0">
+            <div class="w-7 h-7 bg-cyan-400 rounded-md flex items-center justify-center mr-3">
+                <i class="fa-solid fa-chart-line text-[#0B1120] text-xs"></i>
+            </div>
+            <span class="font-display font-bold text-sm text-slate-200">PerformanceLens</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            <a href="{{ url_for('main.dashboard') }}"
+                class="sidebar-link{% if active_page == 'dashboard' %} active{% endif %}">
+                <i class="fa-solid fa-chart-line" aria-hidden="true"></i> Dashboard
+            </a>
+            <a href="{{ url_for('main.input') }}" class="sidebar-link{% if active_page == 'input' %} active{% endif %}">
+                <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> Manage results
+            </a>
+            <a href="{{ url_for('main.analysis') }}" class="sidebar-link{% if active_page == 'analysis' %} active{% endif %}">
+                <i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i> Analysis
+            </a>
+            <a href="{{ url_for('main.recommendations') }}" class="sidebar-link{% if active_page == 'recommendations' %} active{% endif %}">
+                <i class="fa-solid fa-list-check" aria-hidden="true"></i> Recommendations
+            </a>
+            <a href="{{ url_for('main.study_schedule') }}" class="sidebar-link{% if active_page == 'study_schedule' %} active{% endif %}">
+                <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Schedule Maker
+            </a>
+            <a href="{{ url_for('main.study') }}" class="sidebar-link{% if active_page == 'study' %} active{% endif %}">
+                <i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Study Schedules
+            </a>
+        </nav>
+
+        <!-- Bottom Settings / User -->
+        <div class="px-4 pb-6 border-t border-slate-800/50 pt-4 mt-auto">
+            <a href="{{ url_for('main.settings') }}" class="sidebar-link{% if active_page == 'settings' %} active{% endif %}">
+                <i class="fa-solid fa-gear" aria-hidden="true"></i> Settings
+            </a>
+            <div class="flex items-center gap-3 mt-4 px-4">
+                <div
+                    class="w-8 h-8 rounded-full bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center">
+                    <span class="text-cyan-400 text-xs font-bold" id="sidebarUserInitial">{{ user_initial }}</span>
+                </div>
+                <div class="truncate">
+                    <p class="text-sm font-medium text-slate-300 truncate" id="sidebarUserName">{{ user_display_name }}</p>
+                    <p class="text-[10px] text-slate-600 uppercase tracking-wider">Student</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="md:ml-64 min-h-screen flex flex-col relative">
+
+        <!-- Background Shapes (Sit behind content) -->
+        <div class="shape-circle-1"></div>
+        <div class="shape-circle-2"></div>
+        <div class="shape-plus"></div>
+        <div class="shape-dots">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+
+        <!-- Top Bar (Mobile Header) -->
+        <header
+            class="sticky top-0 z-30 h-16 flex items-center px-6 md:px-8 bg-[#0B1120] border-b border-slate-800/50">
+            <!-- Mobile Hamburger -->
+            <button type="button" id="sidebarOpenBtn" class="md:hidden mr-4 min-h-[44px] min-w-[44px] -ml-2 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/40 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 focus-visible:outline-offset-2" onclick="toggleSidebar()" aria-controls="sidebar" aria-expanded="false" aria-label="Open menu">
+                <i class="fa-solid fa-bars text-lg" aria-hidden="true"></i>
+            </button>
+
+            <!-- Page Title -->
+            <h1 class="font-display text-lg font-bold text-white">{% block page_title %}Dashboard{% endblock %}</h1>
+        </header>
+
+        <!-- Page Content -->
+        <main class="flex-1 relative z-10 overflow-y-auto {% block main_classes %}p-6 md:p-8{% endblock %}">
+            <div id="page-content-root">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+
+        <!-- Floating toast container (bottom-left, stacking) -->
+        <div id="toast-container" class="fixed bottom-4 left-4 z-[9999] pointer-events-none space-y-2">
+            <!-- Toasts will be dynamically added here -->
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const btn = document.getElementById('sidebarOpenBtn');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+            const isOpen = !sidebar.classList.contains('-translate-x-full');
+            if (btn) {
+                btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                btn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+            }
+            if (overlay) {
+                overlay.setAttribute('aria-hidden', overlay.classList.contains('hidden') ? 'true' : 'false');
+            }
+        }
+    </script>
+    <script>
+        (function () {
+            'use strict';
+
+            var container = document.getElementById('toast-container');
+            var toastCounter = 0;
+            var activeToasts = new Map();
+
+            function createToastElement(id, message, kind, durationMs) {
+                var toast = document.createElement('div');
+                toast.id = 'toast-' + id;
+                toast.className = 'pointer-events-auto rounded-lg border px-4 py-3 shadow-lg backdrop-blur-sm max-w-sm transform transition-all duration-300 ease-out';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-100%) translateY(20px)';
+                
+                // Set colors based on kind
+                if (kind === 'error') {
+                    toast.classList.add('border-red-500', 'bg-red-950', 'text-red-100');
+                    toast.setAttribute('role', 'alert');
+                    toast.setAttribute('aria-live', 'assertive');
+                } else if (kind === 'warn') {
+                    toast.classList.add('border-amber-500', 'bg-amber-950', 'text-amber-100');
+                    toast.setAttribute('role', 'status');
+                    toast.setAttribute('aria-live', 'polite');
+                } else {
+                    toast.classList.add('border-emerald-500', 'bg-emerald-950', 'text-emerald-100');
+                    toast.setAttribute('role', 'status');
+                    toast.setAttribute('aria-live', 'polite');
+                }
+
+                // Create content
+                var content = document.createElement('div');
+                content.className = 'flex items-start gap-3';
+                
+                var text = document.createElement('p');
+                text.className = 'whitespace-pre-wrap break-words text-sm leading-relaxed font-medium flex-1';
+                text.textContent = message;
+                
+                content.appendChild(text);
+                
+                // Add dismiss button for errors or manual dismiss
+                if (kind === 'error' || durationMs === 0) {
+                    var dismissBtn = document.createElement('button');
+                    dismissBtn.className = 'min-h-[32px] shrink-0 rounded-md border border-slate-600 px-2 py-1 text-xs font-semibold hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400';
+                    dismissBtn.textContent = '×';
+                    dismissBtn.type = 'button';
+                    dismissBtn.addEventListener('click', function() {
+                        removeToast(id);
+                    });
+                    content.appendChild(dismissBtn);
+                }
+                
+                toast.appendChild(content);
+                return toast;
+            }
+
+            function removeToast(id) {
+                var toast = document.getElementById('toast-' + id);
+                if (!toast) return;
+                
+                var timeout = activeToasts.get(id);
+                if (timeout) clearTimeout(timeout);
+                
+                // Animate out
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-100%) translateY(20px)';
+                toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                
+                setTimeout(function() {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                    activeToasts.delete(id);
+                }, 300);
+            }
+
+            window.toast = function (opts) {
+                opts = opts || {};
+                if (!container) return;
+
+                var msg = opts.text != null ? String(opts.text) : '';
+                // Fix Unicode encoding by properly escaping special characters
+                msg = msg.replace(/[\u2014\u2013\u2019\u2026]/g, function(match) {
+                    const replacements = {
+                        '\u2014': '-',
+                        '\u2013': '-', 
+                        '\u2019': "'",
+                        '\u2026': '...'
+                    };
+                    return replacements[match] || match;
+                });
+                
+                var kind = opts.kind || 'ok';
+                var durationMs = opts.durationMs != null ? Number(opts.durationMs) : (kind === 'error' ? 0 : 5000);
+                
+                var toastId = ++toastCounter;
+                var toast = createToastElement(toastId, msg, kind, durationMs);
+                
+                // Add to container
+                container.appendChild(toast);
+                
+                // Animate in
+                setTimeout(function() {
+                    toast.style.opacity = '1';
+                    toast.style.transform = 'translateX(0) translateY(0)';
+                }, 10);
+                
+                // Set auto-dismiss
+                var timeout = null;
+                if (durationMs > 0) {
+                    timeout = setTimeout(function() {
+                        removeToast(toastId);
+                    }, durationMs);
+                    activeToasts.set(toastId, timeout);
+                }
+                
+                // Limit number of toasts (remove oldest if too many)
+                var toasts = container.children;
+                if (toasts.length > 5) {
+                    var oldestId = parseInt(toasts[0].id.replace('toast-', ''));
+                    removeToast(oldestId);
+                }
+            };
+        })();
+    </script>
+    <script src="{{ url_for('static', filename='vendor/gsap.min.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

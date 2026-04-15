@@ -1,0 +1,143 @@
+/* === BASE === */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--color-bg);
+    height: 100vh;
+    overflow: hidden;
+    color: var(--color-text-body);
+}
+.font-display { font-family: 'Space Grotesk', sans-serif; }
+
+/* === SHAPES === */
+.shape { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
+.s-1 { width: 300px; height: 300px; background: var(--color-accent-light); top: -100px; right: -80px; }
+.s-2 { width: 200px; height: 200px; background: var(--color-primary-light); bottom: -60px; left: -60px; }
+.s-3 { width: 100px; height: 100px; background: #F5F3FF; top: 40%; left: 5%; }
+.s-4 { width: 50px; height: 50px; background: #ECFDF5; top: 20%; right: 10%; }
+.s-5 { width: 24px; height: 24px; background: #FEF3C7; bottom: 30%; right: 18%; border-radius: 4px; }
+.s-6 { width: 16px; height: 16px; background: #DBEAFE; top: 60%; left: 12%; border-radius: 3px; }
+.s-7 { width: 80px; height: 80px; background: #FEE2E2; bottom: 15%; right: 6%; }
+.s-8 { width: 20px; height: 20px; background: #E0E7FF; top: 15%; left: 22%; border-radius: 2px; transform: rotate(45deg); }
+
+@media (min-width: 768px) {
+    .s-1 { width: 450px; height: 450px; }
+    .s-2 { width: 300px; height: 300px; }
+}
+
+/* === STEPS === */
+.step {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+}
+
+/* === FLOATING INPUTS === */
+.input-group {
+    position: relative;
+}
+.input-field {
+    background: var(--color-bg-subtle);
+    border: 1.5px solid var(--color-border);
+    border-radius: 8px;
+    padding: 22px 16px 8px 16px; /* Top padding makes room for label */
+    color: var(--color-text-main); /* Fixed: High contrast dark text */
+    font-size: 15px;
+    width: 100%;
+    transition: border-color 0.2s, background 0.2s;
+    outline: none;
+}
+.input-field::placeholder { color: transparent; } /* Hide default placeholder */
+.input-label {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: var(--color-text-muted);
+    pointer-events: none;
+    transition: 0.2s ease all;
+    transform-origin: left;
+}
+
+/* Float up on focus or when filled */
+.input-field:focus ~ .input-label,
+.input-field.has-value ~ .input-label {
+    top: 12px;
+    transform: translateY(0) scale(0.75);
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+/* Desktop-app style bottom border on focus */
+.input-field:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 1px 0 0 var(--color-primary); 
+    background: var(--color-bg);
+}
+
+/* === LEVEL CARDS === */
+.level-card {
+    flex: 1; padding: 20px 16px; border-radius: 12px;
+    border: 1.5px solid var(--color-border); background: var(--color-bg-subtle);
+    cursor: pointer; transition: all 0.15s ease; text-align: center;
+}
+.level-card:hover { border-color: #D1D5DB; background: var(--color-bg-muted); }
+.level-card.selected { background: var(--color-primary-light); border-color: var(--color-primary-border); }
+.level-card.selected .level-icon { color: var(--color-primary); }
+.level-card.selected .level-label { color: #9A3412; }
+
+/* === UPLOAD ZONE === */
+.upload-zone {
+    border: 2px dashed var(--color-border); border-radius: 12px;
+    padding: 40px 20px; text-align: center; cursor: pointer;
+    transition: all 0.2s ease; background: var(--color-bg-subtle);
+}
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--color-primary); background: var(--color-primary-light);
+}
+.upload-zone.has-file {
+    border-color: var(--color-success); background: #F0FDFA; border-style: solid;
+}
+
+/* === PROGRESS === */
+.progress-track { height: 2px; background: var(--color-bg-muted); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 999px; background: var(--color-primary); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* === BUTTONS === */
+.btn-primary {
+    background: var(--color-primary); color: white; font-weight: 600;
+    padding: 12px 32px; border-radius: 8px; font-size: 15px; border: none;
+    cursor: pointer; transition: background 0.15s, transform 0.1s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary:hover { background: var(--color-primary-hover); }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-ghost {
+    background: transparent; color: var(--color-text-muted); font-weight: 500;
+    padding: 12px 24px; border-radius: 8px; font-size: 15px; border: none;
+    cursor: pointer; transition: color 0.15s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-ghost:hover { color: var(--color-text-secondary); }
+
+/* === ANIMATIONS === */
+.check-circle {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: #F0FDFA; border: 2px solid var(--color-success);
+    display: flex; align-items: center; justify-content: center;
+}
+.check-circle.pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+.welcome-box {
+    width: 96px; height: 96px; border-radius: 24px;
+    background: var(--color-primary-light); border: 2px solid var(--color-primary-border);
+    display: flex; align-items: center; justify-content: center; position: relative;
+}
+.welcome-dot { position: absolute; width: 12px; height: 12px; border-radius: 3px; transform: rotate(45deg); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
