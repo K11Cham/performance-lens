@@ -110,6 +110,18 @@
             background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
             box-shadow: 0 24px 80px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
             padding: 28px 24px 26px;
+            position: relative;
+        }
+        
+        .onb-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgb(56, 189, 248, 0.3), transparent);
+            border-radius: 16px 16px 0 0;
         }
 
         @media (min-width: 640px) {
@@ -249,7 +261,7 @@
         .dz-box:hover,
         .dz-box.drag-over {
             border-color: rgb(56, 189, 248);
-            background: rgb(56, 189, 248);
+            background: linear-gradient(145deg, rgba(56, 189, 248, 0.1) 0%, rgba(56, 189, 248, 0.05) 100%);
         }
 
         .dz-corner {
@@ -279,9 +291,22 @@
             height: var(--zone-h);
             overflow: hidden;
             position: relative;
-            background: rgb(11, 17, 32);
+            background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
             border: 1px solid rgb(51, 65, 85);
             border-radius: 14px;
+            box-shadow: 0 8px 32px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
+        }
+        
+        .s5-table-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgb(56, 189, 248, 0.3), transparent);
+            border-radius: 14px 14px 0 0;
+            z-index: 3;
         }
 
         .s5-table-card.has-data::after {
@@ -345,10 +370,22 @@
             overflow-y: auto;
             border-radius: 14px;
             border: 1px solid rgb(51, 65, 85);
-            background: #0f172a;
+            background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
             padding: 22px;
             opacity: 0;
             transform: scale(0.94) translateY(16px);
+            box-shadow: 0 8px 32px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
+        }
+        
+        .modal-sheet::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgb(56, 189, 248, 0.3), transparent);
+            border-radius: 14px 14px 0 0;
         }
 
         .err-msg {
@@ -363,12 +400,13 @@
             width: 72px;
             height: 72px;
             border-radius: 50%;
-            background: rgb(16, 185, 129);
-            border: 2px solid #10B981;
+            background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
+            border: 2px solid rgb(16, 185, 129);
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto;
+            box-shadow: 0 8px 32px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
         }
     </style>
 </head>
@@ -448,7 +486,7 @@
                     <div class="onb-card">
                         <p class="mb-1 text-xs font-bold uppercase tracking-wider text-cyan-400/80">Step 2</p>
                         <h2 class="font-display text-xl font-bold text-white sm:text-2xl">Create a 4-digit PIN</h2>
-                        <p class="mt-2 text-sm text-slate-500">You’ll use this when you return to this device.</p>
+                        <p class="mt-2 text-sm text-slate-500">You'll use this when you return to this device.</p>
                         <label class="onb-label mt-8 text-center">PIN</label>
                         <div class="pin-wrap relative" onclick="document.getElementById('pinInput1').focus()">
                             <div class="pin-dot" id="dot1-1"></div>
@@ -459,6 +497,7 @@
                         </div>
                         <div class="mt-8 flex gap-3">
                             <button type="button" class="btn-ghost" onclick="goToStep(1)"><i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i> Back</button>
+                            <button type="button" class="btn-primary flex-1 disabled" id="pin1NextBtn" onclick="goToStep(3)">Continue</button>
                         </div>
                     </div>
                 </div>
@@ -477,7 +516,7 @@
                             <div class="pin-dot" id="dot2-4"></div>
                             <input type="password" maxlength="4" inputmode="numeric" autocomplete="new-password" class="pin-hidden" id="pinInput2" oninput="handlePinInput(this,2)" aria-label="Confirm PIN">
                         </div>
-                        <p class="err-msg" id="pinError"><i class="fa-solid fa-circle-exclamation mr-1" aria-hidden="true"></i>PINs don’t match</p>
+                        <p class="err-msg" id="pinError"><i class="fa-solid fa-circle-exclamation mr-1" aria-hidden="true"></i>PINs don't match</p>
                         <div class="mt-8 flex gap-3">
                             <button type="button" class="btn-ghost" onclick="goToStep(2)"><i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i> Back</button>
                             <button type="button" class="btn-primary flex-1" onclick="validatePins()">Confirm</button>
@@ -562,10 +601,10 @@
 
                         <div id="doneState" class="onb-card mt-6 hidden max-w-lg mx-auto text-center">
                             <div class="check-bubble mb-6">
-                                <i class="fa-solid fa-check text-2xl text-emerald-400" aria-hidden="true"></i>
+                                <i class="fa-solid fa-check text-2xl text-white" aria-hidden="true"></i>
                             </div>
-                            <h2 class="font-display text-xl font-bold text-white">You’re all set</h2>
-                            <p class="mt-2 text-sm text-slate-500">Head to your dashboard whenever you’re ready.</p>
+                            <h2 class="font-display text-xl font-bold text-white">You're all set</h2>
+                            <p class="mt-2 text-sm text-slate-500">Head to your dashboard whenever you're ready.</p>
                             <button type="button" class="btn-primary mt-8" onclick="goToDashboard()">
                                 Open dashboard <i class="fa-solid fa-arrow-right text-xs" aria-hidden="true"></i>
                             </button>
@@ -657,8 +696,26 @@
                             incoming.style.zIndex = '2';
                             currentStep = next;
                             updateTopBar(next);
-                            if (next === 2) gsap.delayedCall(0.08, () => document.getElementById('pinInput1').focus());
-                            if (next === 3) gsap.delayedCall(0.08, () => document.getElementById('pinInput2').focus());
+                            if (next === 2) {
+                                // Reset pin1 state when arriving at step 2
+                                document.getElementById('pinInput1').value = '';
+                                for (let i = 1; i <= 4; i++) {
+                                    const d = document.getElementById('dot1-' + i);
+                                    d.classList.remove('filled', 'error');
+                                }
+                                document.getElementById('pin1NextBtn').classList.add('disabled');
+                                gsap.delayedCall(0.08, () => document.getElementById('pinInput1').focus());
+                            }
+                            if (next === 3) {
+                                // Reset pin2 state when arriving at step 3
+                                document.getElementById('pinInput2').value = '';
+                                for (let i = 1; i <= 4; i++) {
+                                    const d = document.getElementById('dot2-' + i);
+                                    d.classList.remove('filled', 'error');
+                                }
+                                document.getElementById('pinError').style.display = 'none';
+                                gsap.delayedCall(0.08, () => document.getElementById('pinInput2').focus());
+                            }
                             if (next === 4 && formData.name) {
                                 const first = formData.name.trim().split(/\s+/)[0] || 'friend';
                                 document.getElementById('previewName').textContent = first;
@@ -735,8 +792,14 @@
                 d.classList.toggle('filled', i <= val.length);
                 d.classList.remove('error');
             }
-            if (setNum === 1 && val.length === 4) {
-                gsap.delayedCall(0.2, () => goToStep(3));
+            // Step 2: enable/disable the Continue button based on PIN completeness
+            if (setNum === 1) {
+                const btn = document.getElementById('pin1NextBtn');
+                if (val.length === 4) {
+                    btn.classList.remove('disabled');
+                } else {
+                    btn.classList.add('disabled');
+                }
             }
         }
 
