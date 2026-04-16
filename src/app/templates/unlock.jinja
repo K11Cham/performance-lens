@@ -123,7 +123,10 @@
 
     <div id="unlock-root" class="relative z-10 w-full max-w-md">
         <div class="unlock-card mx-auto">
-            <p class="text-center text-xs font-bold uppercase tracking-wider text-cyan-400/90">PerformanceLens</p>
+            <div class="flex items-center justify-center gap-4">
+                <img src="{{ url_for('static', filename='nysh-logo.png') }}" alt="NYSH Club" class="w-8 h-8 opacity-90">
+                <p class="text-center text-xs font-bold uppercase tracking-wider text-cyan-400/90">PerformanceLens</p>
+            </div>
             <h1 class="font-display mt-3 text-center text-xl font-bold text-white sm:text-2xl">Enter your PIN</h1>
             <p class="mt-2 text-center text-sm text-slate-500">Hi, <span class="text-slate-400">{{ user_name }}</span>. Unlock this session to continue.</p>
 
@@ -145,6 +148,11 @@
                     Sign out
                 </button>
             </p>
+        </div>
+        
+        <!-- NYSH Logo Bottom Right -->
+        <div class="fixed bottom-4 right-4 opacity-80 hover:opacity-100 transition-opacity">
+            <img src="{{ url_for('static', filename='nysh-logo.png') }}" alt="NYSH Club" class="w-6 h-6">
         </div>
     </div>
 

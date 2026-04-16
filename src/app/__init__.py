@@ -14,6 +14,12 @@ def create_app():
         'PERFORMANCELENS_SECRET_KEY',
         'dev-insecure-change-for-packaged-build',
     )
+    
+    # Secure session configuration
+    app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
 
     @app.context_processor
     def inject_user():

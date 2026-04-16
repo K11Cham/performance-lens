@@ -28,8 +28,8 @@
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #0B1120;
             color: #94A3B8;
+            min-height: 100vh;
         }
 
         .font-display {
@@ -184,6 +184,214 @@
             background: rgb(148, 163, 184);
         }
 
+        /* Additional geometric shapes */
+        .shape-triangle {
+            position: fixed;
+            top: 60%;
+            left: 5%;
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 25px solid rgb(56, 189, 248);
+            pointer-events: none;
+            z-index: 0;
+            animation: floatY 18s ease-in-out infinite;
+            opacity: 0.3;
+        }
+
+        /* === CONSISTENT BUTTON SYSTEM === */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 44px;
+            border-radius: 0.5rem;
+            background-color: rgb(34, 211, 238);
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
+            padding-top: 0.625rem;
+            padding-bottom: 0.625rem;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: rgb(11, 17, 32);
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background-color: rgb(103, 232, 249);
+        }
+        .btn-primary:focus-visible {
+            outline: 2px solid rgb(34, 211, 238);
+            outline-offset: 2px;
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 44px;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            background-color: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(4px);
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
+            padding-top: 0.625rem;
+            padding-bottom: 0.625rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: rgb(203, 213, 225);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-secondary:hover {
+            border-color: rgba(148, 163, 184, 1);
+            background-color: rgba(51, 65, 85, 0.8);
+        }
+        .btn-secondary:focus-visible {
+            outline: 2px solid rgb(34, 211, 238);
+            outline-offset: 2px;
+        }
+
+        .btn-danger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 44px;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            background-color: rgba(239, 68, 68, 0.1);
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
+            padding-top: 0.625rem;
+            padding-bottom: 0.625rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: rgb(248, 113, 113);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-danger:hover {
+            border-color: rgba(248, 113, 113, 1);
+            background-color: rgba(239, 68, 68, 0.2);
+        }
+        .btn-danger:focus-visible {
+            outline: 2px solid rgb(239, 68, 68);
+            outline-offset: 2px;
+        }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 44px;
+            border-radius: 0.5rem;
+            border: 1px solid rgb(51, 65, 85);
+            background-color: transparent;
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
+            padding-top: 0.625rem;
+            padding-bottom: 0.625rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: rgb(100, 116, 139);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-ghost:hover {
+            border-color: rgb(100, 116, 139);
+            background-color: rgb(30, 41, 59);
+            color: rgb(203, 213, 225);
+        }
+        .btn-ghost:focus-visible {
+            outline: 2px solid rgb(34, 211, 238);
+            outline-offset: 2px;
+        }
+
+        .btn-sm {
+            min-height: 36px;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-lg {
+            min-height: 52px;
+            padding-left: 2rem;
+            padding-right: 2rem;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .shape-hexagon {
+            position: fixed;
+            top: 40%;
+            left: 85%;
+            width: 30px;
+            height: 17px;
+            background: rgb(148, 163, 184);
+            pointer-events: none;
+            z-index: 0;
+            animation: spinSlow 50s linear infinite;
+            opacity: 0.2;
+        }
+
+        .shape-hexagon::before,
+        .shape-hexagon::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+        }
+
+        .shape-hexagon::before {
+            bottom: 100%;
+            border-bottom: 8.66px solid rgb(148, 163, 184);
+        }
+
+        .shape-hexagon::after {
+            top: 100%;
+            border-top: 8.66px solid rgb(148, 163, 184);
+        }
+
+        .shape-square {
+            position: fixed;
+            top: 80%;
+            left: 15%;
+            width: 25px;
+            height: 25px;
+            border: 2px solid rgb(56, 189, 248);
+            transform: rotate(45deg);
+            pointer-events: none;
+            z-index: 0;
+            animation: floatX 12s ease-in-out infinite;
+            opacity: 0.4;
+        }
+
+        .shape-diamond {
+            position: fixed;
+            top: 25%;
+            left: 75%;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(45deg, rgb(56, 189, 248), rgb(148, 163, 184));
+            transform: rotate(45deg);
+            pointer-events: none;
+            z-index: 0;
+            animation: spinSlow 40s linear infinite reverse;
+            opacity: 0.3;
+        }
+
         /* === SIDEBAR === */
         .sidebar-link {
             display: flex;
@@ -194,21 +402,45 @@
             color: #64748B;
             font-size: 14px;
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             border-left: 2px solid transparent;
             margin: 2px 0;
+            position: relative;
+            background: transparent;
+            box-shadow: 4px 0 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(56, 189, 248, 0.1) 0%, rgba(56, 189, 248, 0.05) 100%);
+            border-radius: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .sidebar-link:hover {
-            background: rgb(148, 163, 184);
             color: #CBD5E1;
+        }
+        
+        .sidebar-link:hover::before {
+            opacity: 1;
         }
 
         .sidebar-link.active {
-            background: rgb(56, 189, 248);
+            background: linear-gradient(180deg, rgb(56, 189, 248) 0%, rgb(34, 211, 238) 100%);
             color: #0B1120;
             border-left-color: #38BDF8;
             font-weight: 600;
+            box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3), 4px 0 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .sidebar-link.active::before {
+            opacity: 0;
         }
 
         .sidebar-link i {
@@ -325,22 +557,60 @@
         .stagger-fade-in > *:nth-child(6) { animation-delay: 0.6s; }
         .stagger-fade-in > *:nth-child(7) { animation-delay: 0.7s; }
         .stagger-fade-in > *:nth-child(8) { animation-delay: 0.8s; }
+    
+        .gl-card {
+    background: linear-gradient(to bottom, #0F172A, #0B1120);
+    box-shadow: 0 8px 32px rgb(0, 0, 0), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    position: relative;
+}
+
+.gl-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.3), transparent);
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.css.gl-card {
+    background: linear-gradient(to bottom, #0F172A, #0B1120);
+    box-shadow: 0 8px 32px rgb(0, 0, 0), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    position: relative;
+}
+
+.gl-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.3), transparent);
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+}
     </style>
 </head>
 
-<body class="antialiased">
+<body class="antialiased bg-gradient-to-b from-[#0B1120] via-[#0F172A] to-[#0B1120]">
 
     <!-- Mobile Overlay -->
     <div id="sidebarOverlay" class="fixed inset-0 bg-black z-40 hidden md:hidden" role="presentation" aria-hidden="true" onclick="toggleSidebar()"></div>
 
     <!-- Sidebar -->
     <aside id="sidebar" aria-label="Main navigation"
-        class="fixed left-0 top-0 h-full w-64 bg-[#0F172A] border-r border-slate-800/50 z-50 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        class="fixed left-0 top-0 h-full w-64 border-r border-slate-800/50 z-40 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out bg-gradient-to-br from-[#0F172A] via-[#0B1120] to-[#0B1120]" style="box-shadow: 8px 0 32px rgba(0, 0, 0, 0.4), 4px 0 16px rgba(0, 0, 0, 0.2);">
 
         <!-- Logo -->
-        <div class="h-16 flex items-center px-6 border-b border-slate-800/50 flex-shrink-0">
-            <div class="w-7 h-7 bg-cyan-400 rounded-md flex items-center justify-center mr-3">
-                <i class="fa-solid fa-chart-line text-[#0B1120] text-xs"></i>
+        <div class="h-16 flex items-center px-6 border-b border-slate-800/50 flex-shrink-0 relative">
+        <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent"></div>
+            <div class="w-7 h-7 bg-cyan-400 rounded-lg flex items-center justify-center mr-3">
+                <i class="fa-solid fa-chart-line text-[#0B1120] text-xs" aria-hidden="true"></i>
             </div>
             <span class="font-display font-bold text-sm text-slate-200">PerformanceLens</span>
         </div>
@@ -360,16 +630,14 @@
             <a href="{{ url_for('main.recommendations') }}" class="sidebar-link{% if active_page == 'recommendations' %} active{% endif %}">
                 <i class="fa-solid fa-list-check" aria-hidden="true"></i> Recommendations
             </a>
-            <a href="{{ url_for('main.study_schedule') }}" class="sidebar-link{% if active_page == 'study_schedule' %} active{% endif %}">
-                <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Schedule Maker
-            </a>
             <a href="{{ url_for('main.study') }}" class="sidebar-link{% if active_page == 'study' %} active{% endif %}">
                 <i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Study Schedules
             </a>
-        </nav>
+                    </nav>
 
         <!-- Bottom Settings / User -->
-        <div class="px-4 pb-6 border-t border-slate-800/50 pt-4 mt-auto">
+            <div class="px-4 pb-6 border-t border-slate-800/50 pt-4 mt-auto relative">
+            <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent"></div>
             <a href="{{ url_for('main.settings') }}" class="sidebar-link{% if active_page == 'settings' %} active{% endif %}">
                 <i class="fa-solid fa-gear" aria-hidden="true"></i> Settings
             </a>
@@ -387,7 +655,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <div class="md:ml-64 min-h-screen flex flex-col relative">
+    <div class="fixed left-0 top-0 right-0 bottom-0 md:left-64 min-h-screen flex flex-col z-30">
 
         <!-- Background Shapes (Sit behind content) -->
         <div class="shape-circle-1"></div>
@@ -396,10 +664,15 @@
         <div class="shape-dots">
             <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
         </div>
+        <div class="shape-triangle"></div>
+        <div class="shape-hexagon"></div>
+        <div class="shape-square"></div>
+        <div class="shape-diamond"></div>
 
         <!-- Top Bar (Mobile Header) -->
         <header
-            class="sticky top-0 z-30 h-16 flex items-center px-6 md:px-8 bg-[#0B1120] border-b border-slate-800/50">
+            class="sticky top-0 z-30 h-16 flex items-center px-6 md:px-8 border-b border-slate-800/50 relative bg-gradient-to-b from-[#0B1120] to-[#0F172A]">
+        <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent"></div>
             <!-- Mobile Hamburger -->
             <button type="button" id="sidebarOpenBtn" class="md:hidden mr-4 min-h-[44px] min-w-[44px] -ml-2 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/40 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 focus-visible:outline-offset-2" onclick="toggleSidebar()" aria-controls="sidebar" aria-expanded="false" aria-label="Open menu">
                 <i class="fa-solid fa-bars text-lg" aria-hidden="true"></i>
@@ -407,6 +680,11 @@
 
             <!-- Page Title -->
             <h1 class="font-display text-lg font-bold text-white">{% block page_title %}Dashboard{% endblock %}</h1>
+            
+            <!-- NYSH Logo Top Right -->
+            <div class="ml-auto flex items-center">
+                <img src="{{ url_for('static', filename='nysh-logo.png') }}" alt="NYSH Club" class="w-8 h-8 opacity-80 hover:opacity-100 transition-opacity">
+            </div>
         </header>
 
         <!-- Page Content -->
@@ -420,6 +698,12 @@
         <div id="toast-container" class="fixed bottom-4 left-4 z-[9999] pointer-events-none space-y-2">
             <!-- Toasts will be dynamically added here -->
         </div>
+    </div>
+
+    <!-- Modal container (outside main content stacking context) -->
+    <div id="modal-container" class="fixed inset-0 z-[99999] pointer-events-none">
+        <!-- Page-specific modals will be rendered here -->
+        {% block modals %}{% endblock %}
     </div>
 
     <script>

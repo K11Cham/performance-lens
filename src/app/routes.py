@@ -755,13 +755,12 @@ def recommendations_page():
 
 @bp.route('/study-schedule', endpoint='study_schedule')
 def study_schedule_page():
-    return render_template('study.jinja', active_page='study_schedule')
-
+    return redirect(url_for('main.study'))
 
 @bp.route('/study', endpoint='study')
 def study_page():
-    return render_template('study.jinja', active_page='study')
-
+    return render_template('study.jinja')
+ 
 
 # ===========================================================================
 # API — Subjects
@@ -996,7 +995,13 @@ def api_dev_session():
     """
     Development endpoint to create a session automatically.
     This helps bypass the onboarding process for development.
+    DISABLED FOR PRODUCTION SECURITY
     """
+    import os
+    # Only allow in development mode
+    if os.environ.get('FLASK_ENV') != 'development':
+        return jsonify({'message': 'Development endpoint not available in production'}), 403
+    
     # Find or create a test user
     conn = get_db()
     cursor = conn.execute('SELECT id, name FROM users WHERE name = "Test User"')
@@ -2064,18 +2069,18 @@ def api_study_schedule_one(schedule_id):
         ).fetchone()
         if not row:
             conn.close()
-            return jsonify({'message': 'Not found.'}), 404
+            return jsonify({'message': 'Schedule not found.'}), 404
         if request.method == 'DELETE':
             conn.execute('DELETE FROM study_schedules WHERE id = ? AND user_id = ?', (schedule_id, uid))
             conn.commit()
             conn.close()
-            return jsonify({'status': 'success'})
+            return jsonify({'status': 'success', 'message': 'Schedule deleted successfully.'})
         plan = json.loads(row['plan_json'])
         conn.close()
         return jsonify({'id': row['id'], 'title': row['title'], 'created_at': row['created_at'], 'plan': plan})
-    except Exception:
+    except Exception as e:
         conn.close()
-        raise
+        return jsonify({'message': f'Failed to load schedule: {str(e)}'}), 500
 
 
 

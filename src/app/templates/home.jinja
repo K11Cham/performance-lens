@@ -29,7 +29,6 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
             margin: 0;
             min-height: 100vh;
-            background: #0B1120;
             color: #94A3B8;
         }
 
@@ -107,7 +106,6 @@
             max-width: 28rem;
             border-radius: 16px;
             border: 1px solid rgb(51, 65, 85);
-            background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
             box-shadow: 0 24px 80px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
             padding: 28px 24px 26px;
             position: relative;
@@ -261,7 +259,6 @@
         .dz-box:hover,
         .dz-box.drag-over {
             border-color: rgb(56, 189, 248);
-            background: linear-gradient(145deg, rgba(56, 189, 248, 0.1) 0%, rgba(56, 189, 248, 0.05) 100%);
         }
 
         .dz-corner {
@@ -291,10 +288,8 @@
             height: var(--zone-h);
             overflow: hidden;
             position: relative;
-            background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
             border: 1px solid rgb(51, 65, 85);
             border-radius: 14px;
-            box-shadow: 0 8px 32px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
         }
         
         .s5-table-card::before {
@@ -370,14 +365,12 @@
             overflow-y: auto;
             border-radius: 14px;
             border: 1px solid rgb(51, 65, 85);
-            background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
             padding: 22px;
             opacity: 0;
             transform: scale(0.94) translateY(16px);
-            box-shadow: 0 8px 32px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
         }
         
-        .modal-sheet::before {
+        .modal-sheet {
             content: '';
             position: absolute;
             top: 0;
@@ -400,18 +393,21 @@
             width: 72px;
             height: 72px;
             border-radius: 50%;
-            background: linear-gradient(145deg, rgb(15, 23, 42) 0%, rgb(11, 17, 32) 100%);
             border: 2px solid rgb(16, 185, 129);
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto;
-            box-shadow: 0 8px 32px rgb(0, 0, 0), inset 0 1px 0 rgb(255, 255, 255);
         }
     </style>
 </head>
 
-<body class="min-h-screen antialiased">
+<body class="min-h-screen antialiased bg-gradient-to-b from-[#0B1120] via-[#0F172A] to-[#0B1120]">
+
+    <!-- NYSH Logo Bottom Right -->
+    <div class="fixed bottom-4 right-4 opacity-80 hover:opacity-100 transition-opacity z-50">
+        <img src="{{ url_for('static', filename='nysh-logo.png') }}" alt="NYSH Club" class="w-6 h-6">
+    </div>
 
     <div id="onb-root" class="relative flex min-h-screen flex-col overflow-hidden">
 
@@ -427,8 +423,8 @@
         <header id="onb-topbar" class="relative z-10 px-5 pb-2 pt-5 sm:px-8" style="opacity:0;visibility:hidden;">
             <div class="mx-auto flex max-w-2xl flex-col gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-400 shadow-lg shadow-cyan-500/15">
-                        <i class="fa-solid fa-chart-line text-sm text-[#0B1120]" aria-hidden="true"></i>
+                    <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-cyan-400 shadow-lg shadow-cyan-500/15">
+                        <i class="fa-solid fa-chart-line text-lg text-[#0B1120]" aria-hidden="true"></i>
                     </div>
                     <span class="font-display text-sm font-bold tracking-tight text-slate-200">PerformanceLens</span>
                     <span class="ml-auto text-[11px] font-semibold uppercase tracking-wider text-slate-600">Setup</span>
@@ -442,11 +438,11 @@
             </div>
         </header>
 
-        <main class="relative z-10 flex flex-1 flex-col min-h-0">
+        <main class="relative z-10 flex flex-1 flex-col min-h-0 shadow-2xl">
             <div id="stepsMount" class="relative flex-1 min-h-0">
                 <!-- Step 0: Hero -->
                 <div class="onb-step is-active" id="onb-step-0">
-                    <div class="onb-card text-center">
+                    <div class="onb-card text-center bg-gradient-to-b from-[#0F172A] to-[#0B1120]">
                         <div id="onb-hero-badge" class="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-400/10">
                             <i class="fa-solid fa-bolt text-2xl text-cyan-400" aria-hidden="true"></i>
                         </div>
@@ -466,7 +462,7 @@
 
                 <!-- Step 1: Name -->
                 <div class="onb-step" id="onb-step-1">
-                    <div class="onb-card">
+                    <div class="onb-card bg-gradient-to-b from-[#0F172A] to-[#0B1120]">
                         <p class="mb-1 text-xs font-bold uppercase tracking-wider text-cyan-400/80">Step 1</p>
                         <h2 class="font-display text-xl font-bold text-white sm:text-2xl">What should we call you?</h2>
                         <p class="mt-2 text-sm text-slate-500">This appears on your dashboard and sidebar.</p>
@@ -483,7 +479,7 @@
 
                 <!-- Step 2: PIN create -->
                 <div class="onb-step" id="onb-step-2">
-                    <div class="onb-card">
+                    <div class="onb-card bg-gradient-to-b from-[#0F172A] to-[#0B1120]">
                         <p class="mb-1 text-xs font-bold uppercase tracking-wider text-cyan-400/80">Step 2</p>
                         <h2 class="font-display text-xl font-bold text-white sm:text-2xl">Create a 4-digit PIN</h2>
                         <p class="mt-2 text-sm text-slate-500">You'll use this when you return to this device.</p>
@@ -504,7 +500,7 @@
 
                 <!-- Step 3: PIN confirm -->
                 <div class="onb-step" id="onb-step-3">
-                    <div class="onb-card">
+                    <div class="onb-card bg-gradient-to-b from-[#0F172A] to-[#0B1120]">
                         <p class="mb-1 text-xs font-bold uppercase tracking-wider text-cyan-400/80">Step 3</p>
                         <h2 class="font-display text-xl font-bold text-white sm:text-2xl">Confirm your PIN</h2>
                         <p class="mt-2 text-sm text-slate-500">Enter the same code again.</p>
@@ -527,13 +523,13 @@
                 <!-- Step 4: Upload -->
                 <div class="onb-step" id="onb-step-4">
                     <div class="mx-auto flex w-full max-w-4xl flex-col px-1 pb-6 sm:px-2">
-                        <div class="onb-card max-w-none">
+                        <div class="onb-card max-w-none bg-gradient-to-b from-[#0F172A] to-[#0B1120]">
                             <p class="mb-1 text-xs font-bold uppercase tracking-wider text-cyan-400/80">Step 4</p>
                             <h2 class="font-display text-xl font-bold text-white sm:text-2xl">Almost there, <span id="previewName" class="text-cyan-400">friend</span>.</h2>
                             <p class="mt-2 text-sm text-slate-500">Upload your first report card, or skip and add results later.</p>
 
                             <div class="s5-zone-row mt-8">
-                                <div class="dz-box" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                                <div class="dz-box bg-gradient-to-b from-transparent to-transparent hover:bg-gradient-to-b hover:from-cyan-400/10 hover:to-cyan-400/5" id="dropZone" onclick="document.getElementById('fileInput').click()">
                                     <div class="dz-corner tl"></div>
                                     <div class="dz-corner br"></div>
                                     <input type="file" id="fileInput" class="pin-hidden" accept=".pdf,.docx,.xlsx,.xls,.csv" onchange="handleFileSelect(event)" aria-label="Upload report file">
@@ -549,7 +545,7 @@
                                 </div>
 
                                 <div id="review-container" class="hidden flex flex-col">
-                                    <div class="s5-table-card" id="review-table-card">
+                                    <div class="s5-table-card bg-gradient-to-b from-[#0F172A] to-[#0B1120]" id="review-table-card">
                                         <table class="w-full border-collapse text-[13px]">
                                             <thead>
                                                 <tr class="border-b border-slate-800/80 bg-[#0f172a]">
@@ -599,8 +595,8 @@
                             </div>
                         </div>
 
-                        <div id="doneState" class="onb-card mt-6 hidden max-w-lg mx-auto text-center">
-                            <div class="check-bubble mb-6">
+                        <div id="doneState" class="onb-card mt-6 hidden max-w-lg mx-auto text-center bg-gradient-to-b from-[#0F172A] to-[#0B1120]">
+                            <div class="check-bubble mb-6 bg-gradient-to-b from-[#0F172A] to-[#0B1120]">
                                 <i class="fa-solid fa-check text-2xl text-white" aria-hidden="true"></i>
                             </div>
                             <h2 class="font-display text-xl font-bold text-white">You're all set</h2>
@@ -620,7 +616,7 @@
 
     <div id="previewModal" class="modal-root" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle" aria-hidden="true">
         <div class="modal-backdrop" onclick="closePreviewModal()"></div>
-        <div class="modal-sheet">
+        <div class="modal-sheet bg-gradient-to-b from-[#0F172A] to-[#0B1120]">
             <div class="mb-4 flex items-center justify-between gap-3">
                 <h3 id="previewModalTitle" class="font-display text-lg font-bold text-white">All results</h3>
                 <button type="button" class="btn-ghost min-h-0 px-2 py-2 text-lg text-slate-500" onclick="closePreviewModal()" aria-label="Close">

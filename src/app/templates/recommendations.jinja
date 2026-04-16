@@ -97,11 +97,7 @@
       data.focus.forEach(function (s) {
         html += '<li class="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-800/40 pb-3 last:border-0 last:pb-0">';
         html += '<span class="font-medium text-slate-200">' + escapeHtml(s.name) + gradeBadge(s.grade) + '</span>';
-        html += '<span class="tabular-nums text-sm text-slate-400">' + s.average + '%';
-        if (s.next_grade && s.next_grade.gap != null && s.next_grade.gap > 0) {
-          html += ' <span class="text-slate-600">·</span> ~' + s.next_grade.gap + ' pts to ' + escapeHtml(s.next_grade.grade);
-        }
-        html += '</span></li>';
+        html += '<span class="tabular-nums text-sm text-emerald-400/90">' + s.average + '%</span></li>';
       });
     } else {
       html += '<li class="text-sm text-slate-600">No subjects yet.</li>';

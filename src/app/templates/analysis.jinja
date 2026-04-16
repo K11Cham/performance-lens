@@ -81,7 +81,7 @@
 
   {# Bottom: terms + raw breakdown side by side on xl #}
   <section class="anal-section grid gap-6 xl:grid-cols-2 xl:gap-8 2xl:grid-cols-5 2xl:gap-8">
-    <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6 2xl:col-span-2" aria-labelledby="terms-heading">
+    <div class="rounded-xl border border-slate-800/50 p-5 sm:p-6" aria-labelledby="terms-heading">
       <h3 id="terms-heading" class="font-display text-lg font-bold text-white">Terms &amp; detail</h3>
       <p class="text-sm text-slate-500">Pick a term for the full score sheet</p>
       <div id="term-cards" class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-2" role="tablist" aria-label="Terms"></div>
@@ -97,7 +97,7 @@
       </div>
     </div>
 
-    <div class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6 xl:min-h-0 2xl:col-span-3" aria-labelledby="subjects-heading">
+    <div class="rounded-xl border border-slate-800/50 p-5 sm:p-6 xl:min-h-0 2xl:col-span-3" aria-labelledby="subjects-heading">
       <h3 id="subjects-heading" class="font-display text-lg font-bold text-white">Subject breakdown</h3>
       <p class="text-sm text-slate-500">Lifetime average and each term’s score</p>
       <div id="subject-bars" class="mt-4 max-h-[min(70vh,52rem)] overflow-y-auto pr-1 xl:max-h-[min(75vh,56rem)] 2xl:max-h-none 2xl:overflow-visible"></div>
@@ -108,7 +108,6 @@
 <div id="anal-empty" class="hidden py-24 text-center sm:py-32">
   <div class="mx-auto max-w-md px-4">
     <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-400/10">
-      <i class="fa-solid fa-magnifying-glass-chart text-2xl text-cyan-400" aria-hidden="true"></i>
     </div>
     <h3 class="font-display text-xl font-bold text-white">Nothing to analyze yet</h3>
     <p class="mt-2 text-sm text-slate-400">Save at least one term of results to unlock charts.</p>

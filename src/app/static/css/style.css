@@ -1,9 +1,7 @@
 /* === BASE === */
 body {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    background: var(--color-bg);
     height: 100vh;
-    overflow: hidden;
     color: var(--color-text-body);
 }
 .font-display { font-family: 'Space Grotesk', sans-serif; }
