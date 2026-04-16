@@ -24,6 +24,7 @@
   'use strict';
 
   var STUDY_URL = '{{ url_for("main.study_schedule") }}';
+  var PREDICTIONS_URL = '{{ url_for("main.api_predictions") }}';
 
   function escapeHtml(s) {
     if (s == null) return '';
@@ -194,6 +195,30 @@
       html += sectionShell('Grade band risk', 'Averages sitting near the bottom edge of their letter band — small slips have outsized impact.', arInner);
     }
 
+    if (data.predictions && Object.keys(data.predictions).length > 0) {
+      var predInner = '<div class="space-y-4">';
+      Object.keys(data.predictions).forEach(function(subject) {
+        var pred = data.predictions[subject];
+        var riskColor = pred.predicted_score < 60 ? 'text-red-400' : pred.predicted_score < 75 ? 'text-amber-400' : 'text-emerald-400';
+        var trendIcon = pred.trend === 'improving' ? 'fa-arrow-trend-up' : pred.trend === 'declining' ? 'fa-arrow-trend-down' : 'fa-minus';
+        var trendColor = pred.trend === 'improving' ? 'text-emerald-400' : pred.trend === 'declining' ? 'text-red-400' : 'text-slate-400';
+        
+        predInner += '<div class="rounded-lg border border-slate-800 bg-slate-900/50 p-4">';
+        predInner += '<div class="flex items-center justify-between mb-2">';
+        predInner += '<h4 class="font-medium text-white">' + escapeHtml(subject) + '</h4>';
+        predInner += '<span class="text-sm font-bold ' + riskColor + '">' + pred.predicted_score + '%</span>';
+        predInner += '</div>';
+        predInner += '<div class="flex items-center gap-4 text-xs text-slate-400">';
+        predInner += '<span><i class="fa-solid ' + trendIcon + ' ' + trendColor + '"></i> ' + pred.trend + '</span>';
+        predInner += '<span>Confidence: ' + pred.confidence + '%</span>';
+        predInner += '<span>Based on ' + pred.data_points + ' terms</span>';
+        predInner += '</div>';
+        predInner += '</div>';
+      });
+      predInner += '</div>';
+      html += sectionShell('Grade predictions', 'AI-powered predictions for upcoming terms based on your historical performance patterns.', predInner);
+    }
+
     if (data.trajectories && data.trajectories.length) {
       var trInner = '<ul class="space-y-2">';
       data.trajectories.forEach(function (t) {
@@ -256,7 +281,34 @@
           '<span class="tabular-nums text-slate-400">' + s.average + '%</span></li>';
       });
       rankInner += '</ul>';
-      html += sectionShell('Full subject ranking', 'Lifetime average descending — use for sanity checks when allocating discretionary time.', rankInner);
+      html += sectionShell('Full subject ranking', 'Lifetime average descending - use for sanity checks when allocating discretionary time.', rankInner);
+    }
+
+    // Add prevention strategies section
+    if (data.strategies && data.strategies.length > 0) {
+      var stratInner = '<div class="space-y-4">';
+      data.strategies.forEach(function(strategy) {
+        var riskClass = strategy.risk_level === 'high' ? 'border-red-500/25 bg-red-500/5' : strategy.risk_level === 'medium' ? 'border-amber-500/25 bg-amber-500/5' : 'border-emerald-500/25 bg-emerald-500/5';
+        var riskLabel = strategy.risk_level === 'high' ? 'High Risk' : strategy.risk_level === 'medium' ? 'Medium Risk' : 'Low Risk';
+        var riskColor = strategy.risk_level === 'high' ? 'text-red-400' : strategy.risk_level === 'medium' ? 'text-amber-400' : 'text-emerald-400';
+        
+        stratInner += '<div class="rounded-lg border ' + riskClass + ' p-4">';
+        stratInner += '<div class="flex items-center justify-between mb-3">';
+        stratInner += '<h4 class="font-medium text-white">' + escapeHtml(strategy.subject) + '</h4>';
+        stratInner += '<span class="text-xs font-semibold ' + riskColor + '">' + riskLabel + '</span>';
+        stratInner += '</div>';
+        stratInner += '<ul class="space-y-2 text-sm text-slate-300">';
+        strategy.strategies.forEach(function(strat) {
+          stratInner += '<li class="flex items-start gap-2">';
+          stratInner += '<i class="fa-solid fa-lightbulb text-cyan-400 mt-0.5"></i>';
+          stratInner += '<span>' + escapeHtml(strat) + '</span>';
+          stratInner += '</li>';
+        });
+        stratInner += '</ul>';
+        stratInner += '</div>';
+      });
+      stratInner += '</div>';
+      html += sectionShell('Prevention strategies', 'Actionable steps to prevent grade decline and improve performance.', stratInner);
     }
 
     html += '<section class="rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-6">';
@@ -286,16 +338,34 @@
     }
   }
 
-  fetch("{{ url_for('main.api_recommendations') }}")
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      render(data);
-      show();
+  // Fetch both recommendations and predictions
+  Promise.all([
+    fetch("{{ url_for('main.api_recommendations') }}").then(function (r) { return r.json(); }),
+    fetch(PREDICTIONS_URL).then(function (r) { 
+      if (r.ok) return r.json(); 
+      return { predictions: {}, strategies: [], summary: "Predictions unavailable" };
     })
-    .catch(function () {
-      document.getElementById('rec-loading').classList.add('hidden');
-      document.getElementById('rec-error').classList.remove('hidden');
-    });
+  ])
+  .then(function (results) {
+    var recommendations = results[0];
+    var predictions = results[1];
+    
+    // Merge predictions into recommendations data
+    recommendations.predictions = predictions.predictions;
+    recommendations.strategies = predictions.strategies;
+    
+    // Update summary to include predictions if available
+    if (predictions.summary && predictions.summary !== "Insufficient data for predictions.") {
+      recommendations.summary = recommendations.summary + " " + predictions.summary;
+    }
+    
+    render(recommendations);
+    show();
+  })
+  .catch(function () {
+    document.getElementById('rec-loading').classList.add('hidden');
+    document.getElementById('rec-error').classList.remove('hidden');
+  });
 })();
 </script>
 {% endblock %}

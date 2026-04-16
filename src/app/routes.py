@@ -12,6 +12,46 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session, Response
 from werkzeug.security import generate_password_hash, check_password_hash
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    # Fallback basic math functions
+    class np:
+        @staticmethod
+        def arange(n):
+            return list(range(n))
+        
+        @staticmethod
+        def array(data):
+            return data
+        
+        @staticmethod
+        def polyfit(x, y, degree):
+            if degree != 1 or len(x) < 2:
+                return [0, sum(y) / len(y)]
+            # Simple linear regression
+            n = len(x)
+            sum_x = sum(x)
+            sum_y = sum(y)
+            sum_xy = sum(x[i] * y[i] for i in range(n))
+            sum_x2 = sum(x[i] * x[i] for i in range(n))
+            
+            slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+            intercept = (sum_y - slope * sum_x) / n
+            return [slope, intercept]
+        
+        @staticmethod
+        def var(data):
+            if len(data) < 2:
+                return 0
+            mean = sum(data) / len(data)
+            return sum((x - mean) ** 2 for x in data) / len(data)
+        
+        @staticmethod
+        def mean(data):
+            return sum(data) / len(data) if data else 0
 
 from . import study_schedule as sched
 
@@ -61,6 +101,143 @@ def _db_path():
 
 
 ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.xlsx', '.xls', '.csv'}
+
+
+# ===========================================================================
+# Grade Prediction Functions
+# ===========================================================================
+
+def predict_grades(user_id):
+    """Predict future grades using statistical analysis and trend analysis."""
+    conn = get_db()
+    
+    # Get historical performance data
+    historical_data = conn.execute("""
+        SELECT term_name, subject, score, school_year 
+        FROM results 
+        WHERE user_id = ? 
+        ORDER BY term_name, subject
+    """, (user_id,)).fetchall()
+    
+    if len(historical_data) < 3:
+        return {"error": "Insufficient data for predictions. Need at least 3 terms of data."}
+    
+    # Organize data by subject
+    subject_data = defaultdict(list)
+    for row in historical_data:
+        subject_data[row['subject']].append({
+            'term': row['term_name'],
+            'score': row['score'],
+            'year': row['school_year']
+        })
+    
+    predictions = {}
+    
+    for subject, data in subject_data.items():
+        if len(data) < 2:
+            continue
+            
+        # Extract scores for analysis
+        scores = [entry['score'] for entry in data]
+        
+        # Calculate trend using linear regression
+        if len(scores) >= 3:
+            # Simple linear regression for trend
+            x = np.arange(len(scores))
+            y = np.array(scores)
+            
+            # Calculate slope and intercept
+            slope = np.polyfit(x, y, 1)[0]
+            intercept = np.polyfit(x, y, 1)[1]
+            
+            # Predict next term score
+            next_term_score = slope * len(scores) + intercept
+            
+            # Calculate confidence based on variance
+            variance = np.var(scores)
+            confidence = max(0, min(100, 100 - variance))
+            
+            # Determine trend direction
+            trend = "improving" if slope > 1 else "declining" if slope < -1 else "stable"
+            
+        else:
+            # Simple average for limited data
+            next_term_score = np.mean(scores)
+            variance = np.var(scores)
+            confidence = max(0, min(100, 100 - variance * 2))
+            trend = "stable"
+        
+        # Ensure predictions are within reasonable bounds
+        next_term_score = max(0, min(100, next_term_score))
+        
+        predictions[subject] = {
+            'predicted_score': round(next_term_score, 1),
+            'confidence': round(confidence, 1),
+            'trend': trend,
+            'historical_average': round(np.mean(scores), 1),
+            'data_points': len(scores)
+        }
+    
+    conn.close()
+    return predictions
+
+def generate_prevention_strategies(predictions):
+    """Generate actionable strategies to prevent grade decline."""
+    strategies = []
+    
+    for subject, prediction in predictions.items():
+        subject_strategies = []
+        
+        # High-risk subjects (predicted < 60 or declining trend)
+        if prediction['predicted_score'] < 60 or prediction['trend'] == 'declining':
+            subject_strategies.extend([
+                "Increase study time by 25-50% for this subject",
+                "Form study groups with classmates",
+                "Seek additional help from teachers or tutors",
+                "Review and strengthen foundational concepts",
+                "Practice more problems and past papers"
+            ])
+        
+        # Medium-risk subjects (predicted 60-75)
+        elif 60 <= prediction['predicted_score'] < 75:
+            subject_strategies.extend([
+                "Maintain current study routine",
+                "Focus on weak areas identified in recent assessments",
+                "Add 1-2 extra practice sessions per week",
+                "Review notes regularly rather than cramming"
+            ])
+        
+        # Low-risk subjects (predicted 75+)
+        else:
+            subject_strategies.extend([
+                "Maintain current performance",
+                "Help others to reinforce your own understanding",
+                "Challenge yourself with advanced material",
+                "Apply concepts to real-world problems"
+            ])
+        
+        # Trend-specific strategies
+        if prediction['trend'] == 'declining':
+            subject_strategies.extend([
+                "Identify what changed in recent terms",
+                "Revisit study methods that worked previously",
+                "Consider if external factors are affecting performance"
+            ])
+        elif prediction['trend'] == 'improving':
+            subject_strategies.extend([
+                "Continue current successful strategies",
+                "Set higher goals to maintain momentum",
+                "Share successful techniques with others"
+            ])
+        
+        strategies.append({
+            'subject': subject,
+            'risk_level': 'high' if prediction['predicted_score'] < 60 else 'medium' if prediction['predicted_score'] < 75 else 'low',
+            'predicted_score': prediction['predicted_score'],
+            'strategies': subject_strategies[:4]  # Limit to top 4 strategies
+        })
+    
+    return strategies
 
 
 # ===========================================================================
@@ -123,12 +300,14 @@ def init_db():
 
 
 def _migrate_results_schema(conn):
-    """Add school_year / term_label to existing DBs; backfill term_label from term_name."""
+    """Add school_year / term_label / user_id to existing DBs; backfill term_label from term_name."""
     cols = {row[1] for row in conn.execute('PRAGMA table_info(results)').fetchall()}
     if 'school_year' not in cols:
         conn.execute("ALTER TABLE results ADD COLUMN school_year TEXT NOT NULL DEFAULT ''")
     if 'term_label' not in cols:
         conn.execute("ALTER TABLE results ADD COLUMN term_label TEXT NOT NULL DEFAULT ''")
+    if 'user_id' not in cols:
+        conn.execute("ALTER TABLE results ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1")
     conn.commit()
     conn.execute("""
         UPDATE results
@@ -1729,6 +1908,65 @@ def api_dashboard_subjects():
 
     conn.close()
     return jsonify({'subjects': subjects, 'latest_term': latest_term})
+
+
+# ===========================================================================
+# API - Grade Predictions
+# ===========================================================================
+
+@bp.route('/api/predictions', methods=['GET'], endpoint='api_predictions')
+def api_predictions():
+    """Get grade predictions and prevention strategies."""
+    uid = _session_uid()
+    
+    # Get predictions
+    predictions = predict_grades(uid)
+    
+    if "error" in predictions:
+        return jsonify(predictions), 400
+    
+    # Generate prevention strategies
+    strategies = generate_prevention_strategies(predictions)
+    
+    return jsonify({
+        'predictions': predictions,
+        'strategies': strategies,
+        'summary': _generate_prediction_summary(predictions, strategies)
+    })
+
+
+def _generate_prediction_summary(predictions, strategies):
+    """Generate a summary of predictions and overall recommendations."""
+    if not predictions:
+        return "Insufficient data for predictions."
+    
+    # Calculate overall risk assessment
+    high_risk_count = sum(1 for s in strategies if s['risk_level'] == 'high')
+    medium_risk_count = sum(1 for s in strategies if s['risk_level'] == 'medium')
+    low_risk_count = sum(1 for s in strategies if s['risk_level'] == 'low')
+    
+    # Calculate average predicted score
+    avg_predicted = np.mean([p['predicted_score'] for p in predictions.values()])
+    
+    # Generate summary based on risk levels
+    if high_risk_count > 0:
+        summary = f"Attention needed: {high_risk_count} subject(s) at high risk of underperformance. "
+        summary += f"Immediate action required to prevent grade decline. "
+    elif medium_risk_count > 0:
+        summary = f"{medium_risk_count} subject(s) need attention to maintain performance. "
+        summary += "Focus on consistent study habits. "
+    else:
+        summary = "Strong performance predicted across all subjects. "
+        summary += "Maintain current study strategies. "
+    
+    summary += f"Average predicted score: {avg_predicted:.1f}%. "
+    
+    # Add trend analysis
+    declining_subjects = sum(1 for p in predictions.values() if p['trend'] == 'declining')
+    if declining_subjects > 0:
+        summary += f"{declining_subjects} subject(s) showing declining trend - review study methods."
+    
+    return summary
 
 
 # ===========================================================================
