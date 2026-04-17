@@ -445,14 +445,14 @@
       var g = avg != null ? resolveGrade(avg) : '?';
       var gc = gradeColor(g);
       var selected = i === selectedTermIndex;
-      var baseCls = 'term-card w-full text-left rounded-xl border p-4 transition min-h-[100px] h-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400 ';
+      var baseCls = 'term-card w-full text-left rounded-xl border p-3 sm:p-4 transition min-h-[90px] sm:min-h-[100px] h-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400 ';
       var stateCls = selected ? 'border-cyan-400 bg-cyan-950 ring-1 ring-cyan-700' : 'border-slate-800 bg-[#0B1120] hover:border-slate-600';
       html += '<button type="button" role="tab" class="' + baseCls + stateCls + '" data-term-index="' + i + '"' +
         ' aria-selected="' + (selected ? 'true' : 'false') + '">' +
-        '<div class="flex items-start justify-between gap-2">' +
-        '<span class="font-display text-sm font-semibold text-white line-clamp-2">' + escapeHtml(tm.term_name) + '</span>' +
+        '<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2">' +
+        '<span class="font-display text-xs sm:text-sm font-semibold text-white line-clamp-2 flex-1">' + escapeHtml(tm.term_name) + '</span>' +
         '<span class="shrink-0 text-xs font-bold px-2 py-0.5 rounded-md" style="background:' + gc + '22;color:' + gc + ';">' + escapeHtml(g) + '</span></div>' +
-        '<div class="mt-3 text-xs text-slate-500">Avg <span class="text-slate-200 font-medium">' + (avg != null ? avg + '%' : '—') + '</span> · ' +
+        '<div class="mt-1 sm:mt-2 text-[10px] sm:text-xs text-slate-500">Avg <span class="text-slate-200 font-medium">' + (avg != null ? avg + '%' : 'â') + '</span> · ' +
         (tm.subject_count || 0) + ' subjects</div></button>';
     }
     wrap.innerHTML = html;
@@ -487,17 +487,17 @@
       (avg != null ? '<span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200">Avg ' + avg + '%</span>' : '') +
       '<span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200">High ' + (term.high != null ? term.high : '—') + '</span>' +
       '<span class="rounded-md bg-slate-800/80 px-2 py-1 text-slate-200">Low ' + (term.low != null ? term.low : '—') + '</span>' + gradeBadge(g);
-    var html = '<table class="w-full min-w-[280px] text-sm"><thead><tr class="text-left text-xs uppercase tracking-wider text-slate-500">' +
-      '<th class="pb-3 pr-4 font-semibold">Subject</th><th class="pb-3 pr-4 font-semibold text-right">Score</th><th class="pb-3 font-semibold text-right">Grade</th></tr></thead><tbody>';
+    var html = '<div class="overflow-x-auto"><table class="w-full min-w-[240px] sm:min-w-[280px] text-xs sm:text-sm"><thead><tr class="text-left text-[11px] sm:text-xs uppercase tracking-wider text-slate-500">' +
+      '<th class="pb-2 sm:pb-3 pr-2 sm:pr-4 font-semibold">Subject</th><th class="pb-2 sm:pb-3 pr-2 sm:pr-4 font-semibold text-right">Score</th><th class="pb-2 sm:pb-3 font-semibold text-right">Grade</th></tr></thead><tbody>';
     for (var i = 0; i < term.results.length; i++) {
       var r = term.results[i];
       var grade = resolveGrade(r.score);
       var border = i < term.results.length - 1 ? ' border-b border-slate-800/50' : '';
-      html += '<tr class="' + border + '"><td class="py-3 pr-4 text-slate-200">' + escapeHtml(r.subject) + '</td>' +
-        '<td class="py-3 pr-4 text-right font-semibold tabular-nums text-white">' + Number(r.score).toFixed(1) + '</td>' +
-        '<td class="py-3 text-right">' + gradeBadge(grade) + '</td></tr>';
+      html += '<tr class="' + border + '"><td class="py-2 sm:py-3 pr-2 sm:pr-4 text-slate-200 text-xs sm:text-sm">' + escapeHtml(r.subject) + '</td>' +
+        '<td class="py-2 sm:py-3 pr-2 sm:pr-4 text-right font-semibold tabular-nums text-white text-xs sm:text-sm">' + Number(r.score).toFixed(1) + '</td>' +
+        '<td class="py-2 sm:py-3 text-right">' + gradeBadge(grade) + '</td></tr>';
     }
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     body.innerHTML = html;
   }
 
@@ -527,14 +527,15 @@
         termBits += '</div>';
       }
       html += '<div class="mb-5 last:mb-0 rounded-lg border border-slate-800 bg-[#0B1120] p-3 sm:p-4">' +
-        '<div class="flex items-center gap-3">' +
-        '<span class="w-[min(40%,200px)] shrink-0 truncate text-right text-sm text-slate-300" title="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</span>' +
-        '<div class="min-w-0 flex-1"><div class="flex h-7 items-center gap-2">' +
-        '<div class="h-3 flex-1 overflow-hidden rounded-full bg-[#0B1120]">' +
-        '<div class="h-full rounded-full" style="width:' + pct + '%;background-color:' + color + '"></div></div>' +
-        '<span class="w-14 shrink-0 text-right text-sm font-semibold tabular-nums text-white">' + s.average.toFixed(1) + '</span>' +
-        '<span class="hidden sm:inline">' + gradeBadge(grade) + '</span></div>' +
-        '<div class="mt-1 flex justify-end sm:hidden">' + gradeBadge(grade) + '</div>' + termBits + '</div></div></div>';
+        '<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">' +
+        '<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto">' +
+        '<span class="w-full sm:w-24 md:w-32 truncate text-xs sm:text-sm text-slate-300" title="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</span>' +
+        '<div class="w-full sm:w-32 md:w-40 lg:w-48 xl:w-56">' +
+        '<div class="h-2.5 sm:h-3 overflow-hidden rounded-full bg-[#0B1120]">' +
+        '<div class="h-full rounded-full transition-all duration-300" style="width:' + Math.min(pct, 95) + '%;background-color:' + color + '"></div></div></div>' +
+        '<div class="flex items-center gap-2 sm:gap-3">' +
+        '<span class="text-xs sm:text-sm font-semibold tabular-nums text-white">' + s.average.toFixed(1) + '</span>' +
+        gradeBadge(grade) + '</div></div>' + termBits + '</div></div></div>';
     }
     el.innerHTML = html;
   }
