@@ -72,6 +72,7 @@ def require_session_unlock():
         'main.api_unlock',
         'main.api_logout',
         'main.api_dev_session',
+        'main.api_session_end',
     ):
         return
 
@@ -764,6 +765,15 @@ def settings_page():
     return render_template('settings.jinja', active_page='settings')
 
 
+@bp.route('/api/session/end', methods=['POST'], endpoint='api_session_end')
+def api_session_end():
+    """End current session but keep user account intact"""
+    if session.get('pin_unlocked'):
+        session.pop('pin_unlocked')
+        session.modified = True
+    return jsonify({'status': 'success', 'message': 'Session ended'})
+
+
 @bp.route('/api/logout', methods=['POST'], endpoint='api_logout')
 def api_logout():
     session.clear()
@@ -935,6 +945,7 @@ def recommendations_page():
 @bp.route('/study-schedule', endpoint='study_schedule')
 def study_schedule_page():
     return redirect(url_for('main.study'))
+
 
 @bp.route('/study', endpoint='study')
 def study_page():

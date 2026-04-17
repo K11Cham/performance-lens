@@ -20,19 +20,21 @@
         </div>
         <div id="periods-loading" class="text-sm text-slate-500 py-4 hidden"><i class="fa-solid fa-spinner fa-spin mr-2" aria-hidden="true"></i>Loading…</div>
         <div id="periods-empty" class="text-sm text-slate-600 py-2">No saved periods yet.</div>
-        <div id="periods-table-wrap" class="hidden overflow-x-auto rounded-lg border border-slate-800/40">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-left text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-800 bg-[#0B1120]">
-                        <th class="px-4 py-3 font-semibold">Display</th>
-                        <th class="px-4 py-3 font-semibold">School year</th>
-                        <th class="px-4 py-3 font-semibold">Term</th>
-                        <th class="px-4 py-3 font-semibold text-right">Rows</th>
-                        <th class="px-4 py-3 font-semibold text-right w-24">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="periods-tbody"></tbody>
-            </table>
+        <div id="periods-table-wrap" class="hidden rounded-lg border border-slate-800/40">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-800 bg-[#0B1120]">
+                            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold text-xs sm:text-sm">Display</th>
+                            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold text-xs sm:text-sm hidden sm:table-cell">School year</th>
+                            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold text-xs sm:text-sm">Term</th>
+                            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold text-xs sm:text-sm text-right">Rows</th>
+                            <th class="px-2 sm:px-4 py-2 sm:py-3 font-semibold text-xs sm:text-sm text-right w-16 sm:w-24">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="periods-tbody"></tbody>
+                </table>
+            </div>
         </div>
     </section>
 
@@ -85,19 +87,21 @@
         </div>
 
         <div id="review-container" class="hidden mt-6 bg-[#0F172A] border border-slate-800 rounded-xl overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-800/50 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-slate-300">Review extracted data</h3>
+            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800/50 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-300 text-xs sm:text-sm">Review extracted data</h3>
                 <button type="button" onclick="resetUpload()" class="text-xs text-slate-500 hover:text-slate-300 transition"><i class="fa-solid fa-arrow-rotate-left mr-1"></i>Redo</button>
             </div>
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-left text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-800/30">
-                        <th class="px-6 py-3 font-semibold">Subject</th>
-                        <th class="px-6 py-3 font-semibold text-right">Score</th>
-                    </tr>
-                </thead>
-                <tbody id="review-tbody"></tbody>
-            </table>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-800/30">
+                            <th class="px-2 sm:px-6 py-2 sm:py-3 font-semibold text-xs sm:text-sm">Subject</th>
+                            <th class="px-2 sm:px-6 py-2 sm:py-3 font-semibold text-xs sm:text-sm text-right">Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="review-tbody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -122,16 +126,18 @@
         </div>
 
         <div class="bg-[#0F172A] border border-slate-800 rounded-xl overflow-hidden">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-left text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-800/30">
-                        <th class="px-6 py-3 font-semibold">Subject</th>
-                        <th class="px-6 py-3 font-semibold text-right w-[200px]">Score</th>
-                        <th class="px-4 py-3 w-14"></th>
-                    </tr>
-                </thead>
-                <tbody id="manual-tbody"></tbody>
-            </table>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-800/30">
+                            <th class="px-2 sm:px-6 py-2 sm:py-3 font-semibold text-xs sm:text-sm">Subject</th>
+                            <th class="px-2 sm:px-6 py-2 sm:py-3 font-semibold text-xs sm:text-sm text-right w-32 sm:w-[200px]">Score</th>
+                            <th class="px-2 sm:px-4 py-2 sm:py-3 w-10 sm:w-14"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="manual-tbody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -140,9 +146,11 @@
         <span id="error-text"></span>
     </div>
 
-    <div class="flex justify-end pt-2">
-        <button type="button" onclick="saveResults()" id="saveBtn" class="bg-cyan-400 hover:bg-cyan-300 text-[#0B1120] font-bold px-8 py-3 rounded-lg transition-colors text-sm">
-            Save results <i class="fa-solid fa-check ml-2"></i>
+    <div class="flex justify-end pt-4 pb-4 sm:pt-2 sm:pb-2">
+        <button type="button" onclick="saveResults()" id="saveBtn" class="bg-cyan-400 hover:bg-cyan-300 text-[#0B1120] font-bold px-6 sm:px-8 py-3 rounded-lg transition-colors text-sm min-h-[44px]">
+            <span class="hidden sm:inline">Save results</span>
+            <span class="sm:hidden">Save</span>
+            <i class="fa-solid fa-check ml-2"></i>
         </button>
     </div>
 
@@ -232,11 +240,11 @@
                 var tr = document.createElement('tr');
                 tr.className = 'border-b border-slate-800/30 hover:bg-slate-800/15';
                 tr.innerHTML =
-                    '<td class="px-4 py-3 text-slate-200">' + escapeHtml(p.term_name) + '</td>' +
-                    '<td class="px-4 py-3 text-slate-400">' + escapeHtml(p.school_year || '—') + '</td>' +
-                    '<td class="px-4 py-3 text-slate-400">' + escapeHtml(p.term_label) + '</td>' +
-                    '<td class="px-4 py-3 text-right tabular-nums text-slate-500">' + p.row_count + '</td>' +
-                    '<td class="px-4 py-3 text-right">' +
+                    '<td class="px-2 sm:px-4 py-2 sm:py-3 text-slate-200 text-xs sm:text-sm">' + escapeHtml(p.term_name) + '</td>' +
+                    '<td class="px-2 sm:px-4 py-2 sm:py-3 text-slate-400 text-xs sm:text-sm hidden sm:table-cell">' + escapeHtml(p.school_year || '—') + '</td>' +
+                    '<td class="px-2 sm:px-4 py-2 sm:py-3 text-slate-400 text-xs sm:text-sm">' + escapeHtml(p.term_label) + '</td>' +
+                    '<td class="px-2 sm:px-4 py-2 sm:py-3 text-right tabular-nums text-slate-500 text-xs sm:text-sm">' + p.row_count + '</td>' +
+                    '<td class="px-2 sm:px-4 py-2 sm:py-3 text-right">' +
                     '<button type="button" class="text-xs font-semibold text-red-400 hover:text-red-300 delete-period-btn" data-sy="' + escapeAttr(p.school_year) + '" data-tl="' + escapeAttr(p.term_label) + '">Delete</button></td>';
                 tbody.appendChild(tr);
             });
@@ -316,13 +324,13 @@
         tr.setAttribute('data-manual-row', '1');
         tr.className = 'border-b border-slate-800/30 hover:bg-slate-800/20 transition-colors';
         tr.innerHTML =
-            '<td class="px-6 py-3">' +
-            '<input type="text" class="manual-subject w-full min-w-[140px] bg-[#0B1120] border border-slate-800/50 text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-cyan-500/50 outline-none" value="' + escapeAttr(name) + '" placeholder="Subject name" />' +
+            '<td class="px-2 sm:px-6 py-2 sm:py-3">' +
+            '<input type="text" class="manual-subject w-full min-w-[100px] sm:min-w-[140px] bg-[#0B1120] border border-slate-800/50 text-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:border-cyan-500/50 outline-none" value="' + escapeAttr(name) + '" placeholder="Subject name" />' +
             '</td>' +
-            '<td class="px-6 py-3 text-right">' + scoreStepperHtml('manual-score', '', scoreVal) + '</td>' +
-            '<td class="px-4 py-3 text-center">' +
-            '<button type="button" class="manual-row-remove text-slate-600 hover:text-red-400 transition p-2 rounded-lg hover:bg-red-500/10" title="Remove row" aria-label="Remove subject row">' +
-            '<i class="fa-solid fa-trash-can text-sm" aria-hidden="true"></i></button></td>';
+            '<td class="px-2 sm:px-6 py-2 sm:py-3 text-right">' + scoreStepperHtml('manual-score', '', scoreVal) + '</td>' +
+            '<td class="px-2 sm:px-4 py-2 sm:py-3 text-center">' +
+            '<button type="button" class="manual-row-remove text-slate-600 hover:text-red-400 transition p-1.5 sm:p-2 rounded-lg hover:bg-red-500/10" title="Remove row" aria-label="Remove subject row">' +
+            '<i class="fa-solid fa-trash-can text-xs sm:text-sm" aria-hidden="true"></i></button></td>';
         var removeBtn = tr.querySelector('.manual-row-remove');
         if (removeBtn) {
             removeBtn.addEventListener('click', function () {
@@ -463,8 +471,8 @@
             const tr = document.createElement('tr');
             tr.className = 'border-b border-slate-800/30 hover:bg-slate-800/20 transition-colors';
             tr.innerHTML =
-                '<td class="px-6 py-3 text-slate-300">' + escapeHtml(item.subject) + '</td>' +
-                '<td class="px-6 py-3 text-right">' +
+                '<td class="px-2 sm:px-6 py-2 sm:py-3 text-slate-300 text-xs sm:text-sm">' + escapeHtml(item.subject) + '</td>' +
+                '<td class="px-2 sm:px-6 py-2 sm:py-3 text-right">' +
                 scoreStepperHtml('upload-score', 'data-index="' + index + '"', item.score) +
                 '</td>';
             tbody.appendChild(tr);

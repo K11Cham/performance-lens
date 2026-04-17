@@ -847,6 +847,90 @@
                 }
             };
         })();
+
+        // Session Timeout Management
+        (function() {
+            'use strict';
+            
+            var SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+            var WARNING_TIME = 4 * 60 * 1000; // 4 minutes warning
+            var FINAL_WARNING = 30 * 1000; // 30 seconds final warning
+            var activityTimer = null;
+            var warningTimer = null;
+            var finalWarningTimer = null;
+            var lastActivity = Date.now();
+            
+            function resetTimers() {
+                lastActivity = Date.now();
+                clearTimeout(activityTimer);
+                clearTimeout(warningTimer);
+                clearTimeout(finalWarningTimer);
+                
+                // Set main timeout
+                activityTimer = setTimeout(function() {
+                    endSession();
+                }, SESSION_TIMEOUT);
+                
+                // Set warning at 4 minutes
+                warningTimer = setTimeout(function() {
+                    showWarning('Session expiring in 1 minute due to inactivity');
+                }, WARNING_TIME);
+                
+                // Set final warning at 4:30
+                finalWarningTimer = setTimeout(function() {
+                    showWarning('Session expiring in 30 seconds due to inactivity', 'warn');
+                }, WARNING_TIME + FINAL_WARNING);
+            }
+            
+            function showWarning(message, kind) {
+                if (window.toast) {
+                    window.toast({
+                        text: message,
+                        kind: kind || 'warn',
+                        durationMs: kind === 'warn' ? 30000 : 20000 // Longer duration for warnings
+                    });
+                }
+            }
+            
+            function endSession() {
+                // Clear session unlock flag but keep user account
+                fetch('{{ url_for("main.api_session_end") }}', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' }
+                }).then(function() {
+                    // Redirect to unlock page
+                    window.location.href = '{{ url_for("main.unlock_page") }}';
+                }).catch(function() {
+                    // Fallback redirect if fetch fails
+                    window.location.href = '{{ url_for("main.unlock_page") }}';
+                });
+            }
+            
+            function trackActivity(event) {
+                resetTimers();
+            }
+            
+            // Initialize session timeout if user is logged in
+            if (window.location.pathname !== '{{ url_for("main.home") }}' && 
+                window.location.pathname !== '{{ url_for("main.unlock_page") }}') {
+                
+                // Track various user activities
+                var activityEvents = [
+                    'mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'touchmove', 'click'
+                ];
+                
+                activityEvents.forEach(function(eventType) {
+                    document.addEventListener(eventType, trackActivity, { passive: true });
+                });
+                
+                // Start initial timer
+                resetTimers();
+                
+                // Show session info in console for debugging
+                console.log('Session timeout initialized: 5 minutes');
+            }
+        })();
     </script>
     <script src="{{ url_for('static', filename='vendor/gsap.min.js') }}"></script>
     {% block scripts %}{% endblock %}

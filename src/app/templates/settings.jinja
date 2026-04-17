@@ -90,10 +90,21 @@
 
   <section class="rounded-xl border border-slate-800/50 bg-[#0F172A] p-5 sm:p-6" aria-labelledby="sess-heading">
     <h2 id="sess-heading" class="font-display text-lg font-bold text-white">Session</h2>
-    <p class="mt-1 text-xs text-slate-500">Sign out clears this browser session. You will go through setup unlock or PIN next visit.</p>
-    <button type="button" id="btn-logout" class="mt-4 min-h-[44px] rounded-lg border border-slate-600 bg-slate-800/40 px-5 py-2.5 text-sm font-semibold text-slate-200 hover:border-slate-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400">
-      Sign out
-    </button>
+    <p class="mt-1 text-xs text-slate-500">Manage your current browser session. End session requires PIN re-entry but keeps your account.</p>
+    <div class="mt-4 space-y-3">
+      <button type="button" id="btn-end-session" class="min-h-[44px] w-full rounded-lg border border-amber-500/40 bg-amber-500/10 px-5 py-2.5 text-sm font-semibold text-amber-300 hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+        <i class="fa-solid fa-clock mr-2" aria-hidden="true"></i>End current session
+      </button>
+      <button type="button" id="btn-logout" class="min-h-[44px] w-full rounded-lg border border-slate-600 bg-slate-800/40 px-5 py-2.5 text-sm font-semibold text-slate-200 hover:border-slate-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400">
+        <i class="fa-solid fa-right-from-bracket mr-2" aria-hidden="true"></i>Sign out completely
+      </button>
+    </div>
+    <div class="mt-3 p-3 rounded-lg border border-slate-700/50 bg-slate-900/50">
+      <p class="text-xs text-slate-400">
+        <strong class="text-amber-300">End session:</strong> Clears PIN unlock, requires re-entry (keeps account)<br>
+        <strong class="text-red-300">Sign out:</strong> Clears everything, forces re-onboarding (deletes session data)
+      </p>
+    </div>
   </section>
 </div>
 {% endblock %}
@@ -248,19 +259,42 @@
       });
   });
 
-  document.getElementById('btn-logout').addEventListener('click', function () {
-    fetch('{{ url_for("main.api_logout") }}', {
+  document.getElementById('btn-end-session').addEventListener('click', function () {
+    fetch('{{ url_for("main.api_session_end") }}', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
     })
-      .then(function () {
-        window.location.href = '{{ url_for("main.home") }}';
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        showMsg(data.message || 'Session ended', 'ok');
+        setTimeout(function() {
+          window.location.href = '{{ url_for("main.unlock_page") }}';
+        }, 1000);
       })
       .catch(function () {
-        window.location.href = '{{ url_for("main.home") }}';
+        showMsg('Network error', 'error');
       });
+  });
+
+  document.getElementById('btn-logout').addEventListener('click', function () {
+    if (confirm('Sign out completely? This will clear all session data and require re-onboarding.')) {
+      fetch('{{ url_for("main.api_logout") }}', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+        .then(function () {
+          window.location.href = '{{ url_for("main.home") }}';
+        })
+        .catch(function () {
+          window.location.href = '{{ url_for("main.home") }}';
+        });
+    }
   });
 })();
 </script>
