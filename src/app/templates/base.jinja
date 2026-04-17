@@ -655,7 +655,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <div class="fixed left-0 top-0 right-0 bottom-0 md:left-64 min-h-screen flex flex-col z-30">
+    <div class="fixed left-0 top-0 right-0 bottom-0 md:left-64 h-screen flex flex-col z-30">
 
         <!-- Background Shapes (Sit behind content) -->
         <div class="shape-circle-1"></div>
@@ -688,7 +688,7 @@
         </header>
 
         <!-- Page Content -->
-        <main class="flex-1 relative z-10 overflow-y-auto {% block main_classes %}p-6 md:p-8{% endblock %}">
+        <main class="flex-1 relative z-10 overflow-y-auto {% block main_classes %}p-6 md:p-8 pb-20 md:pb-8{% endblock %}">
             <div id="page-content-root">
                 {% block content %}{% endblock %}
             </div>
