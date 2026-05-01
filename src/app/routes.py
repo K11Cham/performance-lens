@@ -907,6 +907,135 @@ def input_page():
     return render_template('input.jinja', active_page='input')
 
 
+@bp.route('/api/restore/json', methods=['POST'], endpoint='api_restore_json')
+def api_restore_json():
+    """Restore data from JSON backup file."""
+    if 'file' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No backup file provided.'}), 400
+    
+    file = request.files['file']
+    if not file.filename.lower().endswith('.json'):
+        return jsonify({'status': 'error', 'message': 'Please upload a JSON backup file.'}), 400
+    
+    try:
+        backup_data = file.read().decode('utf-8')
+        import json
+        data = json.loads(backup_data)
+        
+        # Validate backup format
+        if not isinstance(data, dict) or 'export_format' not in data:
+            return jsonify({'status': 'error', 'message': 'Invalid backup file format.'}), 400
+        
+        if data.get('export_format') != 'performancelens-v1':
+            return jsonify({'status': 'error', 'message': 'This backup file is not compatible with this version.'}), 400
+        
+        conn = get_db()
+        try:
+            # Clear existing data
+            conn.execute('DELETE FROM results')
+            conn.execute('DELETE FROM subjects')
+            
+            # Restore users if present
+            if 'user' in data and data['user']:
+                user_data = data['user']
+                conn.execute('UPDATE users SET name = ? WHERE id = 1', (user_data.get('name', ''),))
+            
+            # Restore subjects
+            if 'subjects' in data and isinstance(data['subjects'], list):
+                conn.executemany(
+                    'INSERT OR IGNORE INTO subjects (name) VALUES (?)',
+                    [(subject,) for subject in data['subjects']]
+                )
+            
+            # Restore results
+            if 'results' in data and isinstance(data['results'], list):
+                conn.executemany(
+                    'INSERT INTO results (term_name, school_year, term_label, subject, score, user_id) VALUES (?, ?, ?, ?, ?, 1)',
+                    [
+                        (r.get('term_name', ''), r.get('school_year', ''), 
+                         r.get('term_label', ''), r.get('subject', ''), r.get('score', 0))
+                        for r in data['results']
+                    ]
+                )
+            
+            # Restore marking scheme
+            if 'marking_scheme' in data and isinstance(data['marking_scheme'], list):
+                conn.executemany(
+                    'DELETE FROM marking_scheme'
+                )
+                conn.executemany(
+                    'INSERT INTO marking_scheme (grade_label, min_score, max_score, sort_order) VALUES (?, ?, ?, ?)',
+                    [
+                        (item.get('grade_label', ''), item.get('min_score', 0), 
+                         item.get('max_score', 0), item.get('sort_order', 0))
+                        for item in data['marking_scheme']
+                    ]
+                )
+            
+            # Restore study preferences
+            if 'study_preferences' in data and isinstance(data['study_preferences'], dict):
+                prefs = data['study_preferences']
+                conn.execute('DELETE FROM study_preferences WHERE user_id = 1')
+                conn.execute(
+                    '''INSERT INTO study_preferences (
+                        user_id, weak_subject_multiplier, session_length_min, break_min, 
+                        max_blocks_per_day, weekend_intensity, reserve_weekly_minutes, 
+                        min_session_min, updated_at
+                    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (
+                        prefs.get('weak_subject_multiplier', 1.75),
+                        prefs.get('session_length_min', 45),
+                        prefs.get('break_min', 10),
+                        prefs.get('max_blocks_per_day', 8),
+                        prefs.get('weekend_intensity', 1.0),
+                        prefs.get('reserve_weekly_minutes', 90),
+                        prefs.get('min_session_min', 20),
+                        prefs.get('updated_at', '')
+                    )
+                )
+            
+            # Restore study availability
+            if 'study_availability' in data and isinstance(data['study_availability'], list):
+                conn.execute('DELETE FROM study_availability WHERE user_id = 1')
+                conn.executemany(
+                    'INSERT INTO study_availability (user_id, day_of_week, start_minutes, end_minutes) VALUES (1, ?, ?, ?)',
+                    [
+                        (item.get('day_of_week', 0), item.get('start_minutes', 0), item.get('end_minutes', 0))
+                        for item in data['study_availability']
+                    ]
+                )
+            
+            # Restore study schedules
+            if 'study_schedules' in data and isinstance(data['study_schedules'], list):
+                conn.execute('DELETE FROM study_schedules WHERE user_id = 1')
+                conn.executemany(
+                    'INSERT INTO study_schedules (user_id, title, created_at, plan_json) VALUES (1, ?, ?, ?)',
+                    [
+                        (item.get('title', ''), item.get('created_at', ''), item.get('plan_json', '{}'))
+                        for item in data['study_schedules']
+                    ]
+                )
+            
+            conn.commit()
+            return jsonify({
+                'status': 'success',
+                'message': f'Successfully restored {len(data.get("results", []))} results, {len(data.get("subjects", []))} subjects, {len(data.get("study_schedules", []))} study schedules.'
+            })
+            
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'status': 'error', 'message': f'Restore failed: {str(e)}'}), 500
+            
+    except json.JSONDecodeError:
+        return jsonify({'status': 'error', 'message': 'Invalid JSON file format.'}), 400
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'File processing error: {str(e)}'}), 500
+        
+    finally:
+        conn.close()
+
+
 @bp.route('/analysis', endpoint='analysis')
 def analysis_page():
     return render_template('analysis.jinja', active_page='analysis')

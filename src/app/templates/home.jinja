@@ -535,6 +535,7 @@
                                 <div class="dz-box bg-gradient-to-b from-transparent to-transparent hover:bg-gradient-to-b hover:from-cyan-400/10 hover:to-cyan-400/5" id="dropZone" onclick="document.getElementById('fileInput').click()">
                                     <div class="dz-corner tl"></div>
                                     <div class="dz-corner br"></div>
+                                    <input type="file" id="restoreFileInput" accept=".json" style="display: none;">
                                     <input type="file" id="fileInput" class="pin-hidden" accept=".pdf,.docx,.xlsx,.xls,.csv" onchange="handleFileSelect(event)" aria-label="Upload report file">
                                     <div id="upload-placeholder">
                                         <i class="fa-solid fa-file-import mb-3 block text-3xl text-slate-600" aria-hidden="true"></i>
@@ -589,6 +590,9 @@
                             </div>
 
                             <div class="mt-10 flex flex-wrap items-center gap-3 border-t border-slate-800/60 pt-6">
+                                <button type="button" class="btn-ghost" onclick="document.getElementById('restoreFileInput').click()">
+                                    <i class="fa-solid fa-file-import text-xs" aria-hidden="true"></i> Restore from Backup
+                                </button>
                                 <button type="button" class="btn-ghost" onclick="goToStep(3)"><i class="fa-solid fa-arrow-left text-xs" aria-hidden="true"></i> Back</button>
                                 <span class="flex-1"></span>
                                 <button type="button" class="btn-ghost" onclick="finishSetup(false)">Skip</button>
@@ -824,6 +828,11 @@
                     document.getElementById('pinInput2').focus();
                 });
             }
+        }
+
+        function handleRestoreFile() {
+            const fileInput = document.getElementById('restoreFileInput');
+            fileInput.click();
         }
 
         const dz = document.getElementById('dropZone');

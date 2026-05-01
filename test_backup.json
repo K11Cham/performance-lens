@@ -1,0 +1,44 @@
+{
+  "export_format": "performancelens-v1",
+  "exported_at": "2026-05-01T15:00:00Z",
+  "user": {
+    "id": 1,
+    "name": "Test User"
+  },
+  "subjects": [
+    "Mathematics",
+    "English",
+    "History"
+  ],
+  "results": [
+    {
+      "term_name": "Term 1",
+      "school_year": "2024-2025",
+      "term_label": "Term 1",
+      "subject": "Mathematics",
+      "score": 85
+    },
+    {
+      "term_name": "Term 1",
+      "school_year": "2024-2025",
+      "term_label": "Term 1",
+      "subject": "English",
+      "score": 78
+    },
+    {
+      "term_name": "Term 1",
+      "school_year": "2024-2025",
+      "term_label": "Term 1",
+      "subject": "History",
+      "score": 92
+    }
+  ],
+  "marking_scheme": [
+    {
+      "grade_label": "A",
+      "min_score": 76,
+      "max_score": 100,
+      "sort_order": 1
+    }
+  ]
+}
