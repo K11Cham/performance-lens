@@ -310,7 +310,50 @@
 </style>
 
 <script>
-(function () {
+  function showDeleteConfirmModal(title) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-sm';
+    modal.innerHTML = `
+      <div class="bg-[#0B1120] rounded-xl border border-slate-700 p-6 max-w-md mx-4">
+        <div class="mb-4">
+          <h3 class="font-display text-lg font-bold text-white mb-2">Confirm Delete</h3>
+          <p class="text-slate-300">Are you sure you want to delete "<span class="text-cyan-400 font-semibold">${title}</span>"? This action cannot be undone.</p>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button type="button" onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">
+            Cancel
+          </button>
+          <button type="button" onclick="this.closest('.fixed').remove(); return true;" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
+            Delete
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    return new Promise((resolve) => {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          modal.remove();
+          resolve(false);
+        }
+      });
+      
+      const buttons = modal.querySelectorAll('button');
+      buttons[0].addEventListener('click', () => {
+        modal.remove();
+        resolve(false);
+      });
+      
+      buttons[1].addEventListener('click', () => {
+        modal.remove();
+        resolve(true);
+      });
+    });
+  }
+
+  const FLOW_STEPS = 4;
+
   'use strict';
 
   var DAY_NAMES   = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
@@ -472,8 +515,8 @@
                 e.stopPropagation();
                 var id = parseInt(btn.getAttribute('data-id'), 10);
                 var t  = btn.getAttribute('data-title');
-                if (!confirm('Delete "' + t + '"?')) return;
-                deleteSchedule(id);
+                if (!showDeleteConfirmModal(t)) return;
+                deleteSchedule(id, t);
               });
             });
           }, 100);
@@ -527,11 +570,15 @@
     '</div>';
   }
 
-  function deleteSchedule(id) {
-    fetch(URLS.schedule_one + id, { method:'DELETE', credentials:'same-origin' })
-      .then(function(r){ if (!r.ok) throw new Error(); })
-      .then(function(){ loadSchedules(); if (window.toast) window.toast({ text:'Schedule deleted.', kind:'success' }); })
-      .catch(function(){ if (window.toast) window.toast({ text:'Delete failed.', kind:'error' }); });
+  function deleteSchedule(id, title) {
+    showDeleteConfirmModal(title).then(function(confirmed) {
+      if (!confirmed) return;
+      
+      fetch(URLS.schedule_one + id, { method:'DELETE', credentials:'same-origin' })
+        .then(function(r){ if (!r.ok) throw new Error(); })
+        .then(function(){ loadSchedules(); if (window.toast) window.toast({ text:'Schedule deleted.', kind:'success' }); })
+        .catch(function(){ if (window.toast) window.toast({ text:'Delete failed.', kind:'error' }); });
+    });
   }
 
   function openFullscreen(id, title) {

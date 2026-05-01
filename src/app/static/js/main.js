@@ -110,7 +110,14 @@ function setupUploadZone() {
 
 function handleFile(file) {
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    if (!['.csv', '.xls', '.xlsx'].includes(ext)) { alert('Please upload a CSV or Excel file.'); return; }
+    if (!['.csv', '.xls', '.xlsx'].includes(ext)) { 
+    if (typeof window !== 'undefined' && window.toast) {
+      window.toast({ text: 'Please upload a CSV or Excel file.', kind: 'error' });
+    } else {
+      alert('Please upload a CSV or Excel file.');
+    }
+    return; 
+  }
 
     formData.file = file;
     const zone = document.getElementById('uploadZone');

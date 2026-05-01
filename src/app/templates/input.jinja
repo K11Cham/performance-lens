@@ -271,7 +271,7 @@
     }
 
     async function deletePeriod(schoolYear, termLabel) {
-        if (!confirm('Delete all results for this term period? This cannot be undone.')) return;
+        if (!await showDeletePeriodConfirmModal()) return;
         try {
             var res = await fetch(URL_DELETE_PERIOD, {
                 method: 'DELETE',

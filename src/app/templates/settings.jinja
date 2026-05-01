@@ -116,6 +116,90 @@
 
   var msgEl = document.getElementById('settings-msg');
 
+  function showLogoutConfirmModal() {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-sm';
+      modal.innerHTML = `
+        <div class="bg-[#0B1120] rounded-xl border border-slate-700 p-6 max-w-md mx-4">
+          <div class="mb-4">
+            <h3 class="font-display text-lg font-bold text-white mb-2">Confirm Sign Out</h3>
+            <p class="text-slate-300">Are you sure you want to sign out? This will clear all session data and require re-onboarding.</p>
+          </div>
+          <div class="flex justify-end gap-3">
+            <button type="button" onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">
+              Cancel
+            </button>
+            <button type="button" onclick="this.closest('.fixed').remove(); return true;" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
+              Sign Out
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      
+      return new Promise((resolve) => {
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) {
+            modal.remove();
+            resolve(false);
+          }
+        });
+        
+        const buttons = modal.querySelectorAll('button');
+        buttons[0].addEventListener('click', () => {
+          modal.remove();
+          resolve(false);
+        });
+        
+        buttons[1].addEventListener('click', () => {
+          modal.remove();
+          resolve(true);
+        });
+      });
+    }
+
+  function showResetConfirmModal() {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-sm';
+      modal.innerHTML = `
+        <div class="bg-[#0B1120] rounded-xl border border-slate-700 p-6 max-w-md mx-4">
+          <div class="mb-4">
+            <h3 class="font-display text-lg font-bold text-white mb-2">Confirm Data Reset</h3>
+            <p class="text-slate-300">Are you sure you want to erase all results and planner data? This action cannot be undone and will require re-onboarding.</p>
+          </div>
+          <div class="flex justify-end gap-3">
+            <button type="button" onclick="this.closest('.fixed').remove()" class="px-4 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">
+              Cancel
+            </button>
+            <button type="button" onclick="this.closest('.fixed').remove(); return true;" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
+              Erase All Data
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      
+      return new Promise((resolve) => {
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) {
+            modal.remove();
+            resolve(false);
+          }
+        });
+        
+        const buttons = modal.querySelectorAll('button');
+        buttons[0].addEventListener('click', () => {
+          modal.remove();
+          resolve(false);
+        });
+        
+        buttons[1].addEventListener('click', () => {
+          modal.remove();
+          resolve(true);
+        });
+      });
+    }
+
   function showMsg(text, kind) {
     if (window.toast) {
       window.toast({ text: text || '', kind: kind === 'warn' ? 'warn' : (kind === 'error' ? 'error' : 'ok') });
@@ -233,7 +317,7 @@
       showMsg('Enter your PIN to erase data.', 'error');
       return;
     }
-    if (!window.confirm('Erase all results and planner data on this device?')) return;
+    if (!showResetConfirmModal()) return;
     fetch('{{ url_for("main.api_settings_reset_data") }}', {
       method: 'POST',
       credentials: 'same-origin',
@@ -281,7 +365,7 @@
   });
 
   document.getElementById('btn-logout').addEventListener('click', function () {
-    if (confirm('Sign out completely? This will clear all session data and require re-onboarding.')) {
+    if (!showLogoutConfirmModal()) {
       fetch('{{ url_for("main.api_logout") }}', {
         method: 'POST',
         credentials: 'same-origin',
