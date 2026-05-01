@@ -395,20 +395,10 @@ def _format_subject_display(name):
 
 def _resolve_subject_name(conn, raw_name):
     """
-    Match existing subject case-insensitively (subjects table, then past results).
-    Otherwise return title-cased formatted name. Misspellings are not corrected.
+    Format subject name without relying on subjects table lookup.
+    Simply returns properly formatted subject name.
     """
-    formatted = _format_subject_display(raw_name)
-    if not formatted:
-        return ''
-    key = formatted.casefold()
-    for r in conn.execute('SELECT name FROM subjects ORDER BY length(name) DESC').fetchall():
-        if r['name'].casefold() == key:
-            return r['name']
-    for r in conn.execute('SELECT DISTINCT subject FROM results').fetchall():
-        if r['subject'].casefold() == key:
-            return r['subject']
-    return formatted
+    return _format_subject_display(raw_name)
 
 
 def _normalize_results_rows(conn, results):
@@ -558,84 +548,69 @@ def _fuzzy_match_subject(cell_text, subjects):
     return None
 
 
-def _parse_rows(rows, subjects, raw_text=''):
+def _parse_rows(rows, raw_text=''):
     """
-    Match rows against known subjects and extract scores.
+    Extract subjects and scores directly from document text without relying on a fixed subjects table.
     Returns (period_dict, [{"subject": ..., "score": ...}]).
     period_dict has school_year, term_label, term_display.
-
-    If subjects table is empty (e.g. user skipped onboarding upload), falls
-    back to blind extraction exactly like ?raw=true — so the input page always
-    works regardless of whether subjects were seeded during onboarding.
     """
-    # No known subjects to match against — go straight to blind extraction
-    if not subjects:
-        return _extract_raw(rows, raw_text)
-
-    period = _build_period_from_text(raw_text)
-    results = []
-    for row in rows:
-        str_cells = [str(c).strip() for c in row if c is not None and str(c).strip()]
-        for i, cell in enumerate(str_cells):
-            subject = _fuzzy_match_subject(cell, subjects)
-            if subject:
-                score = _find_score(str_cells[i + 1:i + 4])
-                if score is not None:
-                    results.append({'subject': subject, 'score': score})
-                    break
-
-    # Fuzzy matching found nothing — fall back to blind extraction
-    # then re-match results against known subjects to keep names consistent
-    if not results:
-        blind = _extract_from_text_lines(raw_text) if raw_text else []
-        if not blind:
-            _, blind = _extract_raw(rows, raw_text)
-        for item in blind:
-            matched = _fuzzy_match_subject(item['subject'], subjects)
-            results.append({'subject': matched or item['subject'], 'score': item['score']})
-
-    return period, results
+    # Always use pure text extraction - no subjects table dependency
+    return _extract_raw(rows, raw_text)
 
 
 def _extract_from_text_lines(raw_text):
     """
-    Regex-based fallback for PDFs where pdfplumber finds no tables.
-    Handles the Gambian school report card format (and similar):
-      <row_num>  <SUBJECT NAME IN CAPS>  <score>  <grade_letter>
-    Also catches plain "Subject Name  85" style lines.
+    Enhanced regex-based extraction for better subject distinction.
+    Handles various report card formats while properly distinguishing between
+    similar subjects like "Mathematics" vs "Further Mathematics".
     """
     results = []
     seen = set()
 
-    # Pattern 1: numbered row — "1  CIVIC EDUCATION  83  A"
+    # Pattern 1: numbered row with detailed subject names
+    # "1  FURTHER MATHEMATICS  83  A" or "1  MATHEMATICS  78  B"
     numbered = re.compile(
-        r'^\d{1,2}[\s.]+([A-Z][A-Z\s&/()\.\-]{2,}?)\s{2,}(\d{1,3})\s+[A-F]',
+        r'^\d{1,2}[\s.]+([A-Z][A-Z\s&/()\.\-]{3,}?)\s{2,}(\d{1,3})\s+[A-F]',
         re.MULTILINE
     )
     for m in numbered.finditer(raw_text):
         subject = m.group(1).strip()
-        score   = float(m.group(2))
+        score = float(m.group(2))
         if 0 <= score <= 100 and subject not in seen:
             seen.add(subject)
             results.append({'subject': subject.title(), 'score': score})
 
-    # Pattern 2: plain "Subject Name   85" (Title Case or mixed)
+    # Pattern 2: Enhanced subject detection with better matching
+    # Handles "Further Mathematics", "Business Studies", "Technical Drawing", etc.
     if not results:
-        plain = re.compile(
-            r'^([A-Za-z][A-Za-z\s&/()\.\-]{2,}?)\s{2,}(\d{1,3})(?:\s|$)',
+        enhanced = re.compile(
+            r'^([A-Z][A-Z\s&/()\.\-]{3,}?)\s{2,}(\d{1,3})(?:\s+[A-F]|\s|$)',
             re.MULTILINE
         )
-        for m in plain.finditer(raw_text):
+        for m in enhanced.finditer(raw_text):
             subject = m.group(1).strip()
-            score   = float(m.group(2))
+            score = float(m.group(2))
             if 0 <= score <= 100 and subject not in seen:
                 seen.add(subject)
-                results.append({'subject': subject, 'score': score})
+                results.append({'subject': subject.title(), 'score': score})
+
+    # Pattern 3: Mixed case subjects (fallback)
+    # "Mathematics  78" or "History  85"
+    if not results:
+        mixed = re.compile(
+            r'^([A-Za-z][A-Za-z\s&/()\.\-]{3,}?)\s{2,}(\d{1,3})(?:\s|$)',
+            re.MULTILINE
+        )
+        for m in mixed.finditer(raw_text):
+            subject = m.group(1).strip()
+            score = float(m.group(2))
+            if 0 <= score <= 100 and subject not in seen:
+                seen.add(subject)
+                results.append({'subject': subject.title(), 'score': score})
 
     return results
 
 
-# Metadata cell patterns to ignore during blind extraction
 _METADATA_RE = re.compile(
     r'(?i)^(gpa|cgpa|times\s|number\s+of|overall|termly|cumulative|remark|'
     r'result|grade|position|shift|class\b|year\b|student|subject|mark|'
@@ -994,10 +969,8 @@ def api_results_upload():
 
     raw_mode = request.args.get('raw', 'false').lower() == 'true'
 
-    if raw_mode:
-        period, data = _extract_raw(all_rows, raw_text)
-    else:
-        period, data = _parse_rows(all_rows, _get_subjects(), raw_text)
+    # Always use pure text extraction - no subjects table dependency
+    period, data = _parse_rows(all_rows, raw_text)
 
     if not data:
         return jsonify({

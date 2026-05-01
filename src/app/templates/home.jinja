@@ -353,24 +353,27 @@
         .modal-backdrop {
             position: absolute;
             inset: 0;
-            background: rgb(0, 0, 0);
+            background: rgba(0, 0, 0, 0.8);
             opacity: 0;
+            z-index: 1;
         }
 
         .modal-sheet {
             position: relative;
             width: 100%;
-            max-width: 28rem;
-            max-height: 80vh;
+            max-width: 48rem;
+            max-height: 90vh;
             overflow-y: auto;
             border-radius: 14px;
             border: 1px solid rgb(51, 65, 85);
-            padding: 22px;
+            padding: 28px;
             opacity: 0;
             transform: scale(0.94) translateY(16px);
+            z-index: 2;
+            background: linear-gradient(to bottom, #0F172A, #0B1120);
         }
         
-        .modal-sheet {
+        .modal-sheet::before {
             content: '';
             position: absolute;
             top: 0;
