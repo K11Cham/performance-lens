@@ -1,4 +1,4 @@
-# PerformanceLens (NYSH)
+# PerformanceLens
 
 Local-first Flask app for school results, dashboards, recommendations, and a study planner. Data lives in **SQLite** on disk—there is no cloud account.
 
